@@ -171,6 +171,11 @@ img.crest{object-fit:contain;border-radius:4px}
 .shot .del{all:unset;cursor:pointer;position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);color:#fff;border-radius:6px;padding:1px 7px;font-size:14px}
 .upl{position:relative;overflow:hidden}.upl input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .bigshot{width:100%;border-radius:8px;display:block}
+.social{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.sbtn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;font:800 15px 'Barlow Condensed';text-transform:uppercase;letter-spacing:.5px;color:#fff}
+.sbtn.dc{background:#5865f2}.sbtn.ig{background:linear-gradient(45deg,#f58529,#dd2a7b,#8134af)}.sbtn.tt{background:#111;border:1px solid #333}
+.sbtn svg{width:20px;height:20px;fill:#fff}
+.foot{max-width:1180px;margin:0 auto;padding:20px 12px 40px;color:var(--muted);font-size:12px;text-align:center;border-top:1px solid var(--line)}
 .var{border-top:1px solid var(--line);padding:12px 14px}
 .var .vh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .var .vd{margin:8px 0;white-space:pre-wrap}
@@ -192,6 +197,7 @@ img.crest{object-fit:contain;border-radius:4px}
   <nav id="nav"></nav>
 </header>
 <main id="app"><div class="loading">Caricamento…</div></main>
+<footer class="foot" id="foot"></footer>
 <div id="modal" class="modal hidden"><div class="mbox"><button class="x" onclick="closeModal()" aria-label="Chiudi">×</button><div id="mbody"></div></div></div>
 <div id="toast"></div>
 <script>
@@ -199,6 +205,10 @@ img.crest{object-fit:contain;border-radius:4px}
 const SUPABASE_URL = 'https://jundozzzocofunskulor.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_u4kfA2sw3UE1AWG5PjBknQ_yQqQkFDn';
 const SITE_NAME = 'ITALIAN VIRTUAL PRO LEAGUE';
+const DISCORD_URL = 'https://discord.gg/SnesjNGUqs';
+const INSTAGRAM_URL = '';   // es. 'https://instagram.com/ivpl.italia'
+const TIKTOK_URL = '';      // es. 'https://tiktok.com/@ivpl.italia'
+const CONTACT_EMAIL = 'ivpl.italia@gmail.com';
 /* ==================================================== */
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -416,7 +426,7 @@ const gateHead=tab=>`<div style="display:flex;justify-content:center;margin:18px
 function vAccedi(){if(ME)return vArea();
   return `<div class="gate">${gateHead('a')}
   <form class="card pad" onsubmit="doLogin(event)"><label class="f">Email</label><input type="email" id="le" required autocomplete="email"><label class="f">Password</label><input type="password" id="lp" required autocomplete="current-password"><div id="lerr"></div><button class="btn full" type="submit">Accedi</button>
-  <div class="row" style="margin-top:12px;justify-content:space-between"><a class="lnk" onclick="forgot()">Password dimenticata?</a><a class="lnk" href="#registrati">Non hai un account? Iscriviti</a></div></form></div>`}
+  <div class="row" style="margin-top:12px;justify-content:space-between"><a class="lnk" onclick="forgot()">Password dimenticata?</a><a class="lnk" href="#registrati">Non hai un account? Iscriviti</a></div></form><div style="margin-top:18px">${socialHTML()}</div></div>`}
 function vRegistrati(){if(ME)return vArea();
   return `<div class="gate">${gateHead('r')}
   <form class="card pad" onsubmit="doSignup(event)"><div class="mut" style="font-size:12px">Come partecipi?</div>
@@ -424,7 +434,7 @@ function vRegistrati(){if(ME)return vArea();
   <label class="f">Gamertag / ID PSN (sarà il tuo nome nel sito)</label><input id="rg" required maxlength="24">
   <div class="row"><div class="sp"><label class="f">Ruolo in campo</label><select id="rp" style="width:100%">${ROLES.map(r=>`<option>${r}</option>`).join('')}</select></div><div class="sp"><label class="f">Piattaforma</label><select id="rpl" style="width:100%"><option>PS5</option><option>Xbox</option><option>PC</option></select></div></div>
   <label class="f">Email</label><input type="email" id="re" required autocomplete="email"><label class="f">Password (minimo 6 caratteri)</label><input type="password" id="rpw" required minlength="6" autocomplete="new-password">
-  <div id="rerr"></div><button class="btn full" type="submit">Crea account</button><div class="row" style="margin-top:12px"><a class="lnk" href="#accedi">Hai già un account? Accedi</a></div></form></div>`}
+  <div id="rerr"></div><button class="btn full" type="submit">Crea account</button><div class="row" style="margin-top:12px"><a class="lnk" href="#accedi">Hai già un account? Accedi</a></div></form><div style="margin-top:18px">${socialHTML()}</div></div>`}
 const errIt=e=>{const m=(e?.message||String(e));
   if(/Invalid login/i.test(m))return 'Email o password sbagliati';
   if(/not confirmed/i.test(m))return 'Devi prima confermare la tua email (controlla anche lo spam)';
@@ -538,6 +548,10 @@ async function sendApply(tid){if(D.cand.some(c=>c.team_id===tid&&c.player_id===M
   const {error}=await sb.from('candidature').insert({team_id:tid,player_id:ME.uid,posizione:document.getElementById('ap2').value,messaggio:document.getElementById('ap3').value.trim()||null});
   if(error)return showErr('aperr',error);closeModal();await refresh();toast('Candidatura inviata')}
 async function copyText(t){try{await navigator.clipboard.writeText(t);toast('Copiato!')}catch(e){toast('Tieni premuto sul testo per copiarlo')}}
+
+/* ---------- social ---------- */
+const DC_ICON='<svg viewBox="0 0 24 24"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.4 18.4 0 0 0-5.6 0L8.6 3a19.7 19.7 0 0 0-4.9 1.4C.6 9 0 13.6.3 18.1A19.9 19.9 0 0 0 6.3 21l1.3-2.1a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12 0l.5.4c-.6.4-1.3.7-2 1l1.3 2.1a19.8 19.8 0 0 0 6-3c.5-5.2-.8-9.7-3.6-13.7ZM8.7 15.4c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm6.6 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z"/></svg>';
+function socialHTML(){return `<div class="social">${DISCORD_URL?`<a class="sbtn dc" href="${DISCORD_URL}" target="_blank" rel="noopener">${DC_ICON}Entra nel Discord</a>`:''}${INSTAGRAM_URL?`<a class="sbtn ig" href="${INSTAGRAM_URL}" target="_blank" rel="noopener">Instagram</a>`:''}${TIKTOK_URL?`<a class="sbtn tt" href="${TIKTOK_URL}" target="_blank" rel="noopener">TikTok</a>`:''}</div>`}
 
 /* ---------- sala VAR ---------- */
 const VAR_MOTIVI=['Risultato inserito errato','Giocatore non in rosa o squalificato','Disconnessione o lag','Ritardo o assenza avversario','Comportamento antisportivo','Altro'];
@@ -740,6 +754,7 @@ function render(){const h=(location.hash||'#home').slice(1);const mm=h.match(/^(
   document.querySelector('header').style.display=ME?'':'none';
   document.getElementById('nav').innerHTML=nav.map(([k,l])=>`<a href="#${k}" class="${k===act2?'on':''}">${l}</a>`).join('');
   document.getElementById('leagues').innerHTML=D.leagues.map(L=>`<button class="${L.id===S.league?'on':''}" onclick="setLeague(${L.id})">${esc(L.nome)}</button>`).join('');
+  document.getElementById('foot').style.display=ME?'':'none';document.getElementById('foot').innerHTML=ME?`${socialHTML()}<div style="margin-top:12px">IVPL – Italian Virtual Pro League · Contatti: ${CONTACT_EMAIL}</div>`:'';
   try{localStorage.setItem('pcl_lg',S.league)}catch(e){}
   const oc=document.querySelector('#rchips .on');if(oc&&oc.scrollIntoView)oc.scrollIntoView({inline:'center',block:'nearest'})}
 function setLeague(id){S.league=id;S.round=null;S.teamFilter=0;if(/^#(partita|squadra|giocatore)-/.test(location.hash))go('#home');else render()}
