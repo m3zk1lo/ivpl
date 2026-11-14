@@ -264,12 +264,13 @@ async function loadAll(){
   D={...D,leagues:l,teams:t,profiles:p,rosa:r,matches:m,events:e,mp};
   if(!S.league||!Lg(S.league))S.league=l[0]?.id||null;
   const {data:{session}}=await sb.auth.getSession();
-  ME=null;D.cand=[];D.inviti=[];D.settings={};
+  ME=null;D.cand=[];D.inviti=[];D.settings={};D.myWa='';D.waT={};
   if(session){
     const uid=session.user.id;
     ME={uid,email:session.user.email,p:P(uid),team:D.teams.find(x=>x.manager_id===uid)||null,inTeam:teamOf(uid)};
     const [c,i,st]=await Promise.all([q('candidature').order('creata_il',{ascending:false}),q('team_inviti'),q('impostazioni')]);
     D.cand=c.data||[];D.inviti=i.data||[];(st.data||[]).forEach(x=>D.settings[x.chiave]=x.valore);
+    try{const [mw,wa]=await Promise.all([sb.from('contatti').select('whatsapp').eq('user_id',uid).maybeSingle(),sb.rpc('contatti_avversari')]);D.myWa=mw.data?.whatsapp||'';(wa.data||[]).forEach(x=>D.waT[x.team_id]=x.whatsapp)}catch(e){}
   }
   STATS=computeStats();
 }
@@ -388,7 +389,9 @@ function vPartita(id){const m=M(id);if(!m)return vHome();const H=T(m.home_id),A=
   <div class="card mb"><div class="pad mut" style="text-align:center;padding-bottom:0;font-size:12px">${esc(Lg(m.league_id)?.nome)} · Giornata ${m.giornata} · ${fmtD(m.dt)} ${fmtT(m.dt)}</div>
   <div class="sb"><div class="side" onclick="go('#squadra-${H.id}')">${crest(H,58)}<b>${esc(H.nome)}</b></div><div style="text-align:center"><div class="big" ${show&&!confirmed(m)?'style="color:var(--gold)"':''}>${show?`${m.gol_casa}-${m.gol_trasferta}`:'VS'}</div><div class="mut" style="font-size:12px">${confirmed(m)?'Finale':show?'In attesa di conferma':'Da giocare'}</div></div><div class="side" onclick="go('#squadra-${A.id}')">${crest(A,58)}<b>${esc(A.nome)}</b></div></div>
   ${show?`<div style="border-top:1px solid var(--line);padding:6px 0">${ev}</div>`:`<div class="empty" style="border-top:1px solid var(--line)">Il risultato verrà inserito da un manager a fine partita e confermato dall'avversario.</div>`}</div>
-  ${motm}${rat}${varCard(m)}${screensCard(m)}`}
+  ${motm}${rat}${canAct&&!confirmed(m)?contactCard(m,H,A):''}${varCard(m)}${screensCard(m)}`}
+function contactCard(m,H,A){const r=t=>`<div class="list-row"><div class="team sp" style="min-width:0">${crest(t,20)}<span>${esc(t.nome)}</span></div>${waBtn(t.id,'Scrivi su WhatsApp')||'<span class="mut" style="font-size:12px">Numero non inserito</span>'}</div>`;
+  return `<div class="card mb"><div class="hd">📱 Contatti manager</div>${r(H)}${r(A)}</div>`}
 
 function vStatistiche(){const L=Lg(S.league);if(!L)return vHome();const d=STATDEF[S.statTab];
   return `<div class="h1">Statistiche ${esc(L.nome)}</div><div class="chips mb">${Object.entries(STATDEF).map(([k,x])=>`<button class="chip ${S.statTab===k?'on':''}" onclick="S.statTab='${k}';render()">${x.lab}</button>`).join('')}</div>
@@ -509,6 +512,7 @@ function managerSection(){const t=ME.team;
   return `<div class="banner mb" style="background:linear-gradient(120deg,${col(t.colore1,'#1565c0')},#0b111b)">${crest(t,54)}<div class="sp"><div style="font-size:12px;opacity:.8">LA MIA SQUADRA</div><div class="n" style="font-size:28px">${esc(t.nome)}</div><div class="m">${t.approvata?esc(Lg(t.league_id)?.nome||'Campionato da assegnare'):'⏳ In attesa di approvazione del commissario'}</div></div><button class="btn sec sm" onclick="editTeam()">Modifica</button></div>
   ${(()=>{const mv=D.vars.filter(v=>v.stato==='aperta'&&mine.some(m=>m.id===v.match_id));return mv.length?`<div class="card mb" style="border-color:var(--gold)"><div class="hd" style="color:var(--gold)">🎥 Sala VAR · segnalazioni in corso</div>${mv.map(v=>{const m=M(v.match_id);return `<div class="list-row"><div class="sp" style="min-width:0"><b>${esc(v.motivo)}</b><div class="mut" style="font-size:12px">G${m.giornata} · ${esc(T(m.home_id)?.nome)} - ${esc(T(m.away_id)?.nome)} · aperta da ${esc(T(v.team_id)?.sigla||'')}</div></div><a class="btn sm" href="#partita-${m.id}">Vai</a></div>`}).join('')}</div>`:''})()}
   ${t.approvata&&D.settings.whatsapp_manager?`<div class="card mb"><div class="list-row"><div class="sp" style="min-width:0"><b>Gruppo WhatsApp dei manager</b><div class="mut" style="font-size:12px">Comunicazioni ufficiali del commissario. Entra e attendi l'approvazione.</div></div><a class="btn sm" style="background:#25d366;color:#05230f" href="${esc(D.settings.whatsapp_manager)}" target="_blank" rel="noopener">Entra nel gruppo</a></div></div>`:''}
+  <div class="card mb"><div class="hd">Il tuo numero WhatsApp</div><div class="pad"><div class="mut" style="font-size:12px;margin-bottom:6px">Serve agli avversari per mettersi d'accordo con te. Lo vedono solo i manager che giocano contro di te e il commissario.</div><div class="row"><input id="mywa" type="tel" inputmode="tel" value="${D.myWa?'+'+esc(D.myWa):''}" placeholder="Es. 333 1234567" style="flex:1;min-width:160px"><button class="btn sm" onclick="saveMyWa()">Salva</button></div>${D.myWa?'':'<div class="mut" style="font-size:12px;margin-top:6px;color:var(--gold)">Non hai ancora inserito il numero.</div>'}</div></div>
   ${orariCard(t,mine)}
   ${toConfirm.length?`<div class="card mb" style="border-color:var(--gold)"><div class="hd" style="color:var(--gold)">Risultati da confermare</div>${toConfirm.map(m=>actRow(m,`<button class="btn sm" onclick="openConfirm(${m.id})">Controlla</button>`)).join('')}</div>`:''}
   <div class="grid g2 mb"><div class="card"><div class="hd">Inserisci risultato</div>${toInsert.map(m=>actRow(m,`<button class="btn sm" onclick="openResult(${m.id})">Inserisci</button>`)).join('')||'<div class="empty">Nessuna partita da inserire</div>'}</div>
@@ -535,6 +539,12 @@ async function saveTeam(ev){ev.preventDefault();try{const row=readTeamForm();con
   const {error}=await sb.from('teams').update(row).eq('id',ME.team.id);if(error)throw error;closeModal();await refresh();toast('Squadra aggiornata')}catch(e){showErr('terr',e)}}
 async function saveProfile(ev){ev.preventDefault();const row={posizione:document.getElementById('pp').value,piattaforma:document.getElementById('ppl').value,disponibilita:document.getElementById('pd').value.trim()||null,bio:document.getElementById('pb').value.trim()||null};
   const {error}=await sb.from('profiles').update(row).eq('id',ME.uid);if(error)return showErr('perr',error);await refresh();toast('Profilo salvato')}
+function waBtn(tid,lbl){const n=D.waT[tid];return n?`<a class="btn sm" style="background:#25d366;color:#05230f" href="https://wa.me/${esc(n)}" target="_blank" rel="noopener">${lbl||'WhatsApp'}</a>`:''}
+async function saveMyWa(){let v=document.getElementById('mywa').value.replace(/[\s\-\.\(\)\/]/g,'').replace(/^\+/,'').replace(/^00/,'');
+  if(!v)return act(sb.from('contatti').delete().eq('user_id',ME.uid),'Numero rimosso');
+  if(/^3\d{8,9}$/.test(v))v='39'+v;
+  if(!/^\d{8,15}$/.test(v))return toast('Numero non valido. Esempio: 3331234567');
+  act(sb.from('contatti').upsert({user_id:ME.uid,whatsapp:v}),'Numero WhatsApp salvato')}
 async function act(promise,msg){const {error}=await promise;if(error){toast(errIt(error));return false}await refresh();if(msg)toast(msg);return true}
 async function leaveTeam(){if(!confirm('Vuoi davvero lasciare la squadra?'))return;act(sb.from('rosa').delete().eq('player_id',ME.uid),'Hai lasciato la squadra')}
 async function withdraw(id){act(sb.from('candidature').delete().eq('id',id),'Candidatura ritirata')}
@@ -631,7 +641,7 @@ function orariCard(t,mine){const now=new Date(),lim=new Date(weekStart(now).getT
     else if(pr)body=`<div class="mut" style="font-size:12px;margin-bottom:6px">${esc(opp.nome)} propone questi orari. Scegli entro ${fmtDT(new Date(new Date(pr.creata_il).getTime()+864e5))}, altrimenti vale il primo:</div><div class="row">${pr.opzioni.map(o=>`<button class="btn sm" onclick="pickTime(${m.id},'${o}')">${fmtDT(new Date(o))}</button>`).join('')}</div>`;
     else if(casa||now>=dl)body=`<button class="btn sm" onclick="proposeModal(${m.id})">Proponi 3 orari</button>`;
     else body=`<div class="mut" style="font-size:12px">Propone ${esc(opp.nome)} entro lunedì alle 23:59. Se non lo fa, potrai proporre tu.</div>`;
-    return `<div class="list-row" style="display:block"><div class="row"><b>G${m.giornata}</b> ${casa?'vs':'@'} ${crest(opp,18)} <b>${esc(opp.nome)}</b><span class="sp"></span>${pr?.scelta?'':`<span class="mut" style="font-size:11px">Riserva: ${fmtDT(m.dt)}</span>`}</div><div style="margin-top:6px">${body}</div></div>`};
+    return `<div class="list-row" style="display:block"><div class="row"><b>G${m.giornata}</b> ${casa?'vs':'@'} ${crest(opp,18)} <b>${esc(opp.nome)}</b><span class="sp"></span>${pr?.scelta?'':`<span class="mut" style="font-size:11px">Riserva: ${fmtDT(m.dt)}</span>`}${waBtn(opp.id)}</div><div style="margin-top:6px">${body}</div></div>`};
   return `<div class="card mb"><div class="hd">Organizza gli orari</div><div class="pad mut" style="font-size:12px;padding-bottom:4px">Il manager di casa propone 3 orari in 3 sere diverse (21:00–23:30) entro lunedì alle 23:59; l'avversario ne sceglie uno entro 24 ore. Senza accordo valgono gli orari di riserva.</div>${list.map(row).join('')}</div>`}
 function proposeModal(mid){const m=M(mid),ws=weekStart(m.dt),min=new Date(Math.max(Date.now(),ws.getTime())),max=new Date(ws.getTime()+7*864e5-30*6e4);
   openModal(`<h3>Proponi 3 orari</h3><div class="mut" style="font-size:12px">Giornata ${m.giornata} · settimana dal ${fmtD(ws)} al ${fmtD(new Date(ws.getTime()+6*864e5))}. 3 sere diverse, tra le 21:00 e le 23:30.</div>
