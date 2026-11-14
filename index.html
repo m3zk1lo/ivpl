@@ -208,6 +208,7 @@ const SITE_NAME = 'ITALIAN VIRTUAL PRO LEAGUE';
 const DISCORD_URL = 'https://discord.gg/SnesjNGUqs';
 const INSTAGRAM_URL = 'https://instagram.com/ivpl.italia';
 const TIKTOK_URL = 'https://www.tiktok.com/@ivpl.italia';
+const X_URL = 'https://x.com/IVPL_Italia';
 const CONTACT_EMAIL = 'ivpl.italia@gmail.com';
 /* ==================================================== */
 
@@ -552,7 +553,7 @@ async function copyText(t){try{await navigator.clipboard.writeText(t);toast('Cop
 
 /* ---------- social ---------- */
 const DC_ICON='<svg viewBox="0 0 24 24"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.4 18.4 0 0 0-5.6 0L8.6 3a19.7 19.7 0 0 0-4.9 1.4C.6 9 0 13.6.3 18.1A19.9 19.9 0 0 0 6.3 21l1.3-2.1a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12 0l.5.4c-.6.4-1.3.7-2 1l1.3 2.1a19.8 19.8 0 0 0 6-3c.5-5.2-.8-9.7-3.6-13.7ZM8.7 15.4c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm6.6 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z"/></svg>';
-function socialHTML(){return `<div class="social">${DISCORD_URL?`<a class="sbtn dc" href="${DISCORD_URL}" target="_blank" rel="noopener">${DC_ICON}Entra nel Discord</a>`:''}${INSTAGRAM_URL?`<a class="sbtn ig" href="${INSTAGRAM_URL}" target="_blank" rel="noopener">Instagram</a>`:''}${TIKTOK_URL?`<a class="sbtn tt" href="${TIKTOK_URL}" target="_blank" rel="noopener">TikTok</a>`:''}</div>`}
+function socialHTML(){return `<div class="social">${DISCORD_URL?`<a class="sbtn dc" href="${DISCORD_URL}" target="_blank" rel="noopener">${DC_ICON}Entra nel Discord</a>`:''}${INSTAGRAM_URL?`<a class="sbtn ig" href="${INSTAGRAM_URL}" target="_blank" rel="noopener">Instagram</a>`:''}${TIKTOK_URL?`<a class="sbtn tt" href="${TIKTOK_URL}" target="_blank" rel="noopener">TikTok</a>`:''}${X_URL?`<a class="sbtn tt" href="${X_URL}" target="_blank" rel="noopener">X</a>`:''}</div>`}
 
 /* ---------- sala VAR ---------- */
 const VAR_MOTIVI=['Risultato inserito errato','Giocatore non in rosa o squalificato','Disconnessione o lag','Ritardo o assenza avversario','Comportamento antisportivo','Altro'];
