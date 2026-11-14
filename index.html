@@ -234,7 +234,15 @@ function standings(lid){const rows={};leagueTeams(lid).forEach(t=>rows[t.id]={t,
   D.matches.filter(m=>m.league_id===lid&&confirmed(m)).sort((a,b)=>(a.dt||0)-(b.dt||0)||a.giornata-b.giornata).forEach(m=>{const H=rows[m.home_id],A=rows[m.away_id];if(!H||!A)return;const hg=m.gol_casa,ag=m.gol_trasferta;
     H.p++;A.p++;H.gf+=hg;H.ga+=ag;A.gf+=ag;A.ga+=hg;
     if(hg>ag){H.w++;A.l++;H.pts+=3;H.form.push('V');A.form.push('P')}else if(hg<ag){A.w++;H.l++;A.pts+=3;A.form.push('V');H.form.push('P')}else{H.d++;A.d++;H.pts++;A.pts++;H.form.push('N');A.form.push('N')}});
-  return Object.values(rows).map(r=>({...r,gd:r.gf-r.ga,form:r.form.slice(-5)})).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.t.nome.localeCompare(b.t.nome))}
+  const list=Object.values(rows).map(r=>({...r,gd:r.gf-r.ga,form:r.form.slice(-5)}));
+  // classifica avulsa: a pari punti contano punti e differenza reti negli scontri diretti, poi diff. reti generale e gol fatti
+  const ms=D.matches.filter(m=>m.league_id===lid&&confirmed(m));
+  const byPts={};list.forEach(r=>(byPts[r.pts]=byPts[r.pts]||[]).push(r));
+  Object.values(byPts).forEach(g=>{const ids=new Set(g.map(r=>r.t.id));g.forEach(r=>{r.hp=0;r.hd=0});
+    if(g.length<2)return;const R2=Object.fromEntries(g.map(r=>[r.t.id,r]));
+    ms.forEach(m=>{if(!ids.has(m.home_id)||!ids.has(m.away_id))return;const H=R2[m.home_id],A=R2[m.away_id],d=m.gol_casa-m.gol_trasferta;
+      H.hd+=d;A.hd-=d;if(d>0)H.hp+=3;else if(d<0)A.hp+=3;else{H.hp++;A.hp++}})});
+  return list.sort((a,b)=>b.pts-a.pts||(b.hp||0)-(a.hp||0)||(b.hd||0)-(a.hd||0)||b.gd-a.gd||b.gf-a.gf||a.t.nome.localeCompare(b.t.nome))}
 const rounds=lid=>Math.max(0,...D.matches.filter(m=>m.league_id===lid).map(m=>m.giornata));
 function curRound(lid){const un=D.matches.filter(m=>m.league_id===lid&&!confirmed(m)).sort((a,b)=>a.giornata-b.giornata);return un.length?un[0].giornata:rounds(lid)}
 function lastPlayedRound(lid){const pl=D.matches.filter(m=>m.league_id===lid&&confirmed(m));return pl.length?Math.max(...pl.map(m=>m.giornata)):0}
@@ -302,7 +310,7 @@ function vHome(){const L=Lg(S.league);
 const faRow=p=>`<div class="tcard" onclick="go('#giocatore-${p.id}')"><div class="avatar" style="width:40px;height:40px;font-size:17px">${esc(p.gamertag[0])}</div><div class="sp" style="min-width:0"><b>${esc(p.gamertag)}</b><div class="m mut">${esc(p.piattaforma)}${p.disponibilita?' · '+esc(p.disponibilita):''}</div></div>${role(p.posizione)}</div>`;
 
 function vClassifica(){const L=Lg(S.league);if(!L)return vHome();const top=L.ordine===1,last=L.ordine===Math.max(...D.leagues.map(x=>x.ordine));
-  return `<div class="h1">Classifica ${esc(L.nome)}</div><div class="card">${tableHTML(L.id)}<div class="legend">${top?'<span><i style="background:var(--gold)"></i>Campione</span>':'<span><i style="background:var(--acc)"></i>Promozione</span>'}${!last?'<span><i style="background:var(--red)"></i>Retrocessione</span>':''}<span>Contano solo i risultati confermati</span></div></div>`}
+  return `<div class="h1">Classifica ${esc(L.nome)}</div><div class="card">${tableHTML(L.id)}<div class="legend">${top?'<span><i style="background:var(--gold)"></i>Campione</span>':'<span><i style="background:var(--acc)"></i>Promozione</span>'}${!last?'<span><i style="background:var(--red)"></i>Retrocessione</span>':''}<span>Contano solo i risultati confermati · A pari punti: scontri diretti, poi differenza reti e gol fatti</span></div></div>`}
 
 function vCalendario(){const L=Lg(S.league);if(!L)return vHome();const lid=L.id,R=rounds(lid);
   if(!R)return `<div class="h1">Calendario</div><div class="card"><div class="empty">Il calendario di ${esc(L.nome)} non è ancora stato creato.</div></div>`;
