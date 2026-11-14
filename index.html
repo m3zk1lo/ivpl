@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ProClub League — EA FC 27</title>
+<title>IVPL — Italian Virtual Pro League</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -134,7 +134,7 @@ label.f+input,label.f+select,label.f+textarea{width:100%}
 .mut{color:var(--muted)}
 .plhead{display:flex;gap:14px;align-items:center;padding:16px}
 .avatar{width:62px;height:62px;border-radius:12px;display:grid;place-items:center;font:800 26px 'Barlow Condensed';background:var(--panel2);border:1px solid var(--line)}
-@media(max-width:620px){.hm{display:none}.h1{font-size:26px}.hero .lg{font-size:32px}.brand small{display:none}.sb .big{font-size:40px}}
+@media(max-width:620px){.brand b{display:none}.hm{display:none}.h1{font-size:26px}.hero .lg{font-size:32px}.brand small{display:none}.sb .big{font-size:40px}}
 
 .navr{margin-left:auto}
 .loading{padding:60px;text-align:center;color:var(--muted)}
@@ -162,7 +162,7 @@ img.crest{object-fit:contain;border-radius:4px}
 <body>
 <header>
   <div class="top">
-    <a href="#home" class="brand"><span class="logo">PCL</span><span><b id="sitename">PROCLUB LEAGUE</b><small>EA FC 27 · Pro Club</small></span></a>
+    <a href="#home" class="brand"><span class="logo">IVPL</span><span><b id="sitename">ITALIAN VIRTUAL PRO LEAGUE</b><small>EA FC 27 · Pro Club</small></span></a>
     <div class="leagues" id="leagues"></div>
   </div>
   <nav id="nav"></nav>
@@ -174,12 +174,12 @@ img.crest{object-fit:contain;border-radius:4px}
 /* ================== CONFIGURAZIONE ================== */
 const SUPABASE_URL = 'https://jundozzzocofunskulor.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_u4kfA2sw3UE1AWG5PjBknQ_yQqQkFDn';
-const SITE_NAME = 'PROCLUB LEAGUE';
+const SITE_NAME = 'ITALIAN VIRTUAL PRO LEAGUE';
 /* ==================================================== */
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 document.getElementById('sitename').textContent = SITE_NAME;
-document.title = SITE_NAME + ' — EA FC 27 Pro Club';
+document.title = 'IVPL — Italian Virtual Pro League';
 
 const ROLES=['POR','DC','ES','ED','CDC','CC','ATT'];
 const GIORNI=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
@@ -280,7 +280,7 @@ function vHome(){const L=Lg(S.league);
   const next=D.matches.filter(m=>m.league_id===lid&&!confirmed(m)).sort((a,b)=>a.giornata-b.giornata);const nr=next.length?next[0].giornata:null;
   const played=D.matches.filter(m=>m.league_id===lid&&confirmed(m));
   const fas=freeAgents().slice(0,4),recr=D.teams.filter(t=>t.approvata&&t.cerca_ruoli?.length).slice(0,5);
-  return `<div class="hero mb"><div class="mut cond" style="font-weight:700">Campionato Pro Club · EA FC 27</div><div class="lg">${esc(L.nome)}</div><div class="meta">${R?`Giornata ${cr} di ${R} · `:'Calendario in preparazione · '}${rows.length} squadre · 11 vs 11</div>
+  return `<div class="hero mb"><div class="mut cond" style="font-weight:700">IVPL · Pro Club · EA FC 27</div><div class="lg">${esc(L.nome)}</div><div class="meta">${R?`Giornata ${cr} di ${R} · `:'Calendario in preparazione · '}${rows.length} squadre · 11 vs 11</div>
   <div class="tiles"><div class="tile"><small>Capolista</small><b>${rows[0]&&played.length?esc(rows[0].t.nome):'—'}</b><em>${rows[0]&&played.length?rows[0].pts+' punti':''}</em></div>
   <div class="tile"><small>Capocannoniere</small><b>${top?esc(top.p.gamertag):'—'}</b><em>${top?top.g+' gol':''}</em></div>
   <div class="tile"><small>Miglior media voto</small><b>${mvp?esc(mvp.p.gamertag):'—'}</b><em>${mvp?mvp.avg.toFixed(2):''}</em></div>
