@@ -434,9 +434,10 @@ function vAccedi(){if(ME)return vArea();
 function vRegistrati(){if(ME)return vArea();
   return `<div class="gate">${gateHead('r')}
   <form class="card pad" onsubmit="doSignup(event)"><div class="mut" style="font-size:12px">Come partecipi?</div>
-  <div class="rolepick"><label><input type="radio" name="ruolo" value="giocatore" checked><div><b>Giocatore</b><small>Entro in una squadra</small></div></label><label><input type="radio" name="ruolo" value="manager"><div><b>Manager</b><small>Creo e gestisco una squadra</small></div></label></div>
+  <div class="rolepick"><label><input type="radio" name="ruolo" value="giocatore" checked onchange="waToggle()"><div><b>Giocatore</b><small>Entro in una squadra</small></div></label><label><input type="radio" name="ruolo" value="manager" onchange="waToggle()"><div><b>Manager</b><small>Creo e gestisco una squadra</small></div></label></div>
   <label class="f">Gamertag / ID PSN (sarà il tuo nome nel sito)</label><input id="rg" required maxlength="24">
   <div class="row"><div class="sp"><label class="f">Ruolo in campo</label><select id="rp" style="width:100%">${ROLES.map(r=>`<option>${r}</option>`).join('')}</select></div><div class="sp"><label class="f">Piattaforma</label><select id="rpl" style="width:100%"><option>PS5</option><option>Xbox</option><option>PC</option></select></div></div>
+  <div id="rwab" style="display:none"><label class="f">Numero WhatsApp (obbligatorio per i manager)</label><input id="rwa" type="tel" inputmode="tel" placeholder="Es. 333 1234567" autocomplete="tel"><div class="mut" style="font-size:11px;margin-top:4px">Lo vedono solo i manager avversari, per accordarsi sugli orari, e il commissario.</div></div>
   <label class="f">Email</label><input type="email" id="re" required autocomplete="email"><label class="f">Password (minimo 6 caratteri)</label><input type="password" id="rpw" required minlength="6" autocomplete="new-password">
   <div id="rerr"></div><button class="btn full" type="submit">Crea account</button><div class="row" style="margin-top:12px"><a class="lnk" href="#accedi">Hai già un account? Accedi</a></div></form><div style="margin-top:18px">${socialHTML()}</div></div>`}
 const errIt=e=>{const m=(e?.message||String(e));
@@ -458,12 +459,17 @@ async function doSignup(ev){ev.preventDefault();const b=ev.submitter;
   const ruolo=document.querySelector('input[name=ruolo]:checked').value,gt=document.getElementById('rg').value.trim();
   if(gt.length<3)return showErr('rerr',{message:'Il gamertag deve avere almeno 3 caratteri'});
   if(D.profiles.some(p=>p.gamertag.toLowerCase()===gt.toLowerCase()))return showErr('rerr',{message:'Questo gamertag è già usato'});
+  const wa=ruolo==='manager'?normWa(document.getElementById('rwa').value):null;
+  if(ruolo==='manager'&&!wa)return showErr('rerr',{message:'Inserisci un numero WhatsApp valido (es. 333 1234567): per i manager è obbligatorio'});
   b&&(b.textContent='Attendi…');
   const {data,error}=await sb.auth.signUp({email:document.getElementById('re').value.trim(),password:document.getElementById('rpw').value,
     options:{data:{gamertag:gt,ruolo,posizione:document.getElementById('rp').value,piattaforma:document.getElementById('rpl').value},emailRedirectTo:location.origin+location.pathname}});
   if(error){b&&(b.textContent='Crea account');return showErr('rerr',error)}
   if(!data.session){document.getElementById('app').innerHTML=`<div style="max-width:440px;margin:30px auto" class="card pad"><div class="h1">Controlla la tua email</div><p>Ti abbiamo mandato un link per confermare l'account. Aprilo e poi torna qui ad accedere.</p><p class="mut" style="font-size:13px">Non la trovi? Guarda nella cartella spam.</p><a class="btn full" href="#accedi">Vai ad accedi</a></div>`;return}
+  if(wa)await sb.from('contatti').upsert({user_id:data.session.user.id,whatsapp:wa});
   await refresh();go('#home');toast('Benvenuto!');checkInvite()}
+function waToggle(){const m=document.querySelector('input[name=ruolo]:checked')?.value==='manager';document.getElementById('rwab').style.display=m?'':'none'}
+function normWa(v){v=(v||'').replace(/[\s\-\.\(\)\/]/g,'').replace(/^\+/,'').replace(/^00/,'');if(/^3\d{8,9}$/.test(v))v='39'+v;return /^\d{8,15}$/.test(v)?v:null}
 async function forgot(){const email=document.getElementById('le')?.value.trim();if(!email)return showErr('lerr',{message:'Scrivi prima la tua email qui sopra'});
   const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
   if(error)return showErr('lerr',error);toast('Ti abbiamo mandato un\'email per cambiare password')}
@@ -501,7 +507,7 @@ function playerSection(){const p=ME.p,t=ME.inTeam,my=D.cand.filter(c=>c.player_i
   ${my.length?`<div class="gsec" style="padding:0 14px">Le mie candidature</div>${my.map(c=>`<div class="list-row">${crest(T(c.team_id),22)}<div class="sp">${esc(T(c.team_id)?.nome)}</div>${c.stato==='in_attesa'?`<span class="tag y">In attesa</span><button class="btn red sm" onclick="withdraw(${c.id})">Ritira</button>`:c.stato==='accettata'?'<span class="tag g">Accettata</span>':'<span class="tag r">Rifiutata</span>'}</div>`).join('')}`:''}</div></div>`}
 
 function managerSection(){const t=ME.team;
-  if(!t)return `<div class="card mb"><div class="hd">Crea la tua squadra</div><form class="pad" onsubmit="createTeam(event)">${teamFormFields()}<div id="terr"></div><button class="btn full" type="submit">Crea squadra</button><div class="mut" style="font-size:12px;margin-top:8px">Dopo la creazione il commissario approva la squadra e la inserisce in un campionato.</div></form></div>`;
+  if(!t)return `<div class="card mb"><div class="hd">Crea la tua squadra</div><form class="pad" onsubmit="createTeam(event)">${teamFormFields()}${D.myWa?'':'<label class="f">Il tuo numero WhatsApp (obbligatorio)</label><input id="tewa" type="tel" inputmode="tel" placeholder="Es. 333 1234567"><div class="mut" style="font-size:11px;margin-top:4px">Lo vedono solo i manager avversari e il commissario.</div>'}<div id="terr"></div><button class="btn full" type="submit">Crea squadra</button><div class="mut" style="font-size:12px;margin-top:8px">Dopo la creazione il commissario approva la squadra e la inserisce in un campionato.</div></form></div>`;
   const roster=rosterOf(t.id),cand=D.cand.filter(c=>c.team_id===t.id&&c.stato==='in_attesa'),inv=D.inviti.find(i=>i.team_id===t.id);
   const link=inv?`${location.origin}${location.pathname}?invito=${inv.codice}`:'';
   const mine=D.matches.filter(m=>m.home_id===t.id||m.away_id===t.id).sort((a,b)=>a.giornata-b.giornata);
@@ -531,7 +537,8 @@ async function uploadLogo(){const f=document.getElementById('tl')?.files?.[0];if
   return sb.storage.from('loghi').getPublicUrl(path).data.publicUrl}
 function readTeamForm(){return{nome:document.getElementById('tn').value.trim(),sigla:document.getElementById('ts').value.trim().toUpperCase(),colore1:document.getElementById('tc1').value,colore2:document.getElementById('tc2').value}}
 async function createTeam(ev){ev.preventDefault();const b=ev.submitter;b&&(b.textContent='Attendi…');
-  try{const row=readTeamForm();const logo=await uploadLogo();if(logo)row.logo_url=logo;row.manager_id=ME.uid;
+  try{if(!D.myWa){const wa=normWa(document.getElementById('tewa')?.value);if(!wa)throw {message:'Inserisci un numero WhatsApp valido (es. 333 1234567): è obbligatorio'};const r=await sb.from('contatti').upsert({user_id:ME.uid,whatsapp:wa});if(r.error)throw r.error;D.myWa=wa}
+    const row=readTeamForm();const logo=await uploadLogo();if(logo)row.logo_url=logo;row.manager_id=ME.uid;
     const {error}=await sb.from('teams').insert(row);if(error)throw error;await refresh();toast('Squadra creata! Ora attendi l\'approvazione')}
   catch(e){b&&(b.textContent='Crea squadra');showErr('terr',e)}}
 function editTeam(){const t=ME.team;openModal(`<h3>Modifica squadra</h3><form onsubmit="saveTeam(event)">${teamFormFields(t)}<div id="terr"></div><button class="btn full" type="submit">Salva</button></form>`)}
@@ -540,10 +547,8 @@ async function saveTeam(ev){ev.preventDefault();try{const row=readTeamForm();con
 async function saveProfile(ev){ev.preventDefault();const row={posizione:document.getElementById('pp').value,piattaforma:document.getElementById('ppl').value,disponibilita:document.getElementById('pd').value.trim()||null,bio:document.getElementById('pb').value.trim()||null};
   const {error}=await sb.from('profiles').update(row).eq('id',ME.uid);if(error)return showErr('perr',error);await refresh();toast('Profilo salvato')}
 function waBtn(tid,lbl){const n=D.waT[tid];return n?`<a class="btn sm" style="background:#25d366;color:#05230f" href="https://wa.me/${esc(n)}" target="_blank" rel="noopener">${lbl||'WhatsApp'}</a>`:''}
-async function saveMyWa(){let v=document.getElementById('mywa').value.replace(/[\s\-\.\(\)\/]/g,'').replace(/^\+/,'').replace(/^00/,'');
-  if(!v)return act(sb.from('contatti').delete().eq('user_id',ME.uid),'Numero rimosso');
-  if(/^3\d{8,9}$/.test(v))v='39'+v;
-  if(!/^\d{8,15}$/.test(v))return toast('Numero non valido. Esempio: 3331234567');
+async function saveMyWa(){const v=normWa(document.getElementById('mywa').value);
+  if(!v)return toast('Numero non valido: per i manager è obbligatorio. Esempio: 333 1234567');
   act(sb.from('contatti').upsert({user_id:ME.uid,whatsapp:v}),'Numero WhatsApp salvato')}
 async function act(promise,msg){const {error}=await promise;if(error){toast(errIt(error));return false}await refresh();if(msg)toast(msg);return true}
 async function leaveTeam(){if(!confirm('Vuoi davvero lasciare la squadra?'))return;act(sb.from('rosa').delete().eq('player_id',ME.uid),'Hai lasciato la squadra')}
