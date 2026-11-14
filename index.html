@@ -263,12 +263,12 @@ async function loadAll(){
   D={...D,leagues:l,teams:t,profiles:p,rosa:r,matches:m,events:e,mp};
   if(!S.league||!Lg(S.league))S.league=l[0]?.id||null;
   const {data:{session}}=await sb.auth.getSession();
-  ME=null;D.cand=[];D.inviti=[];
+  ME=null;D.cand=[];D.inviti=[];D.settings={};
   if(session){
     const uid=session.user.id;
     ME={uid,email:session.user.email,p:P(uid),team:D.teams.find(x=>x.manager_id===uid)||null,inTeam:teamOf(uid)};
-    const [c,i]=await Promise.all([q('candidature').order('creata_il',{ascending:false}),q('team_inviti')]);
-    D.cand=c.data||[];D.inviti=i.data||[];
+    const [c,i,st]=await Promise.all([q('candidature').order('creata_il',{ascending:false}),q('team_inviti'),q('impostazioni')]);
+    D.cand=c.data||[];D.inviti=i.data||[];(st.data||[]).forEach(x=>D.settings[x.chiave]=x.valore);
   }
   STATS=computeStats();
 }
@@ -507,6 +507,7 @@ function managerSection(){const t=ME.team;
   const actRow=(m,btn)=>`<div class="row" style="padding-right:12px;border-bottom:1px solid rgba(35,47,71,.6)"><div class="sp" style="min-width:0">${mrow(m,true)}</div>${btn}</div>`;
   return `<div class="banner mb" style="background:linear-gradient(120deg,${col(t.colore1,'#1565c0')},#0b111b)">${crest(t,54)}<div class="sp"><div style="font-size:12px;opacity:.8">LA MIA SQUADRA</div><div class="n" style="font-size:28px">${esc(t.nome)}</div><div class="m">${t.approvata?esc(Lg(t.league_id)?.nome||'Campionato da assegnare'):'⏳ In attesa di approvazione del commissario'}</div></div><button class="btn sec sm" onclick="editTeam()">Modifica</button></div>
   ${(()=>{const mv=D.vars.filter(v=>v.stato==='aperta'&&mine.some(m=>m.id===v.match_id));return mv.length?`<div class="card mb" style="border-color:var(--gold)"><div class="hd" style="color:var(--gold)">🎥 Sala VAR · segnalazioni in corso</div>${mv.map(v=>{const m=M(v.match_id);return `<div class="list-row"><div class="sp" style="min-width:0"><b>${esc(v.motivo)}</b><div class="mut" style="font-size:12px">G${m.giornata} · ${esc(T(m.home_id)?.nome)} - ${esc(T(m.away_id)?.nome)} · aperta da ${esc(T(v.team_id)?.sigla||'')}</div></div><a class="btn sm" href="#partita-${m.id}">Vai</a></div>`}).join('')}</div>`:''})()}
+  ${t.approvata&&D.settings.whatsapp_manager?`<div class="card mb"><div class="list-row"><div class="sp" style="min-width:0"><b>Gruppo WhatsApp dei manager</b><div class="mut" style="font-size:12px">Comunicazioni ufficiali del commissario. Entra e attendi l'approvazione.</div></div><a class="btn sm" style="background:#25d366;color:#05230f" href="${esc(D.settings.whatsapp_manager)}" target="_blank" rel="noopener">Entra nel gruppo</a></div></div>`:''}
   ${orariCard(t,mine)}
   ${toConfirm.length?`<div class="card mb" style="border-color:var(--gold)"><div class="hd" style="color:var(--gold)">Risultati da confermare</div>${toConfirm.map(m=>actRow(m,`<button class="btn sm" onclick="openConfirm(${m.id})">Controlla</button>`)).join('')}</div>`:''}
   <div class="grid g2 mb"><div class="card"><div class="hd">Inserisci risultato</div>${toInsert.map(m=>actRow(m,`<button class="btn sm" onclick="openResult(${m.id})">Inserisci</button>`)).join('')||'<div class="empty">Nessuna partita da inserire</div>'}</div>
@@ -715,10 +716,12 @@ function vAdmin(){if(!isAdmin())return vArea();
      <div class="row"><div><label class="f">Orario riserva 1ª giornata</label><input type="time" id="ct${L.id}" value="21:30"></div><div><label class="f">Orario riserva 2ª giornata</label><input type="time" id="ct2${L.id}" value="22:15"></div></div>
      <label class="days" style="margin-top:10px"><label><input type="checkbox" id="cr${L.id}" checked> Andata e ritorno</label></label>
      <button class="btn full" onclick="genCalendar(${L.id})" ${ts.length<2?'disabled style="opacity:.5"':''}>Genera calendario (${ts.length} squadre)</button>`}</div></div>`}).join('')}
+  <div class="card mb"><div class="hd">Gruppo WhatsApp manager</div><div class="pad"><div class="mut" style="font-size:12px;margin-bottom:6px">Il link lo vedono solo i manager di squadre approvate, nella loro area.</div><div class="row"><input id="wal" value="${esc(D.settings.whatsapp_manager||'')}" placeholder="https://chat.whatsapp.com/..." style="flex:1;min-width:180px"><button class="btn sm" onclick="saveWa()">Salva</button></div></div></div>
   <div class="card mb"><div class="hd">Nuovo campionato</div><div class="pad row"><input id="nl" placeholder="es. Serie C" style="flex:1"><button class="btn sm" onclick="addLeague()">Aggiungi</button></div></div>
   <div class="card mb"><div class="hd">Utenti (${D.profiles.length})</div><div class="pad" style="padding-bottom:0"><input id="uf" placeholder="Cerca gamertag…" style="width:100%" oninput="filterUsers(this.value)"></div><div id="ulist">${usersRows('')}</div></div>`}
 function usersRows(f){return D.profiles.filter(p=>p.gamertag.toLowerCase().includes(f.toLowerCase())).slice(0,40).map(p=>`<div class="list-row"><div class="sp" style="min-width:0"><a href="#giocatore-${p.id}"><b>${esc(p.gamertag)}</b></a> <span class="mut" style="font-size:12px">${esc(teamOf(p.id)?.nome||'svincolato')}</span></div><select onchange="setRole('${p.id}',this.value)" ${p.id===ME.uid?'disabled':''}>${[['giocatore','Giocatore'],['manager','Manager'],['admin','Commissario']].map(([v,l])=>`<option value="${v}" ${v===p.ruolo_utente?'selected':''}>${l}</option>`).join('')}</select></div>`).join('')}
 function filterUsers(v){document.getElementById('ulist').innerHTML=usersRows(v)}
+async function saveWa(){const v=document.getElementById('wal').value.trim();if(v&&!/^https:\/\/chat\.whatsapp\.com\//.test(v))return toast('Il link deve iniziare con https://chat.whatsapp.com/');act(sb.from('impostazioni').upsert({chiave:'whatsapp_manager',valore:v}),'Link WhatsApp salvato')}
 async function approve(tid){act(sb.from('teams').update({approvata:true,league_id:+document.getElementById('al'+tid).value}).eq('id',tid),'Squadra approvata')}
 async function moveTeam(tid,lid){act(sb.from('teams').update({league_id:+lid}).eq('id',tid),'Squadra spostata')}
 async function delTeam(tid){if(!confirm('Eliminare la squadra '+T(tid).nome+'? Verranno cancellate anche le sue partite.'))return;act(sb.from('teams').delete().eq('id',tid),'Squadra eliminata')}
