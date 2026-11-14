@@ -276,21 +276,22 @@ async function loadAll(){
   STATS=computeStats();
 }
 const confirmed=m=>m.stato==='confermato';
+const isCupM=m=>Lg(m.league_id)?.tipo==='coppa';
 function computeStats(){const S2={};D.profiles.forEach(p=>S2[p.id]={p,apps:0,g:0,a:0,vs:0,vn:0,motm:0,cs:0,log:[]});
-  const ok=new Map(D.matches.filter(m=>confirmed(m)&&!m.turno).map(m=>[m.id,m]));
+  const ok=new Map(D.matches.filter(m=>confirmed(m)&&!isCupM(m)).map(m=>[m.id,m]));
   D.mp.forEach(x=>{const m=ok.get(x.match_id),s=S2[x.player_id];if(!m||!s)return;const home=x.team_id===m.home_id,ga=home?m.gol_trasferta:m.gol_casa,gf=home?m.gol_casa:m.gol_trasferta;
     s.apps++;if(x.voto!=null){s.vs+=+x.voto;s.vn++}if(ga===0&&['POR','DC'].includes(s.p.posizione))s.cs++;
     s.log.push({m,tid:x.team_id,opp:home?m.away_id:m.home_id,gf,ga,voto:x.voto==null?null:+x.voto,g:0,a:0})});
   D.events.forEach(e=>{if(!ok.has(e.match_id))return;const sc=S2[e.marcatore_id],as=S2[e.assist_id];if(sc){sc.g++;const l=sc.log.find(x=>x.m.id===e.match_id);if(l)l.g++}if(as){as.a++;const l=as.log.find(x=>x.m.id===e.match_id);if(l)l.a++}});
   ok.forEach(m=>{const s=S2[m.motm_id];if(s)s.motm++});
   Object.values(S2).forEach(s=>{s.avg=s.vn?s.vs/s.vn:0;s.log.sort((a,b)=>(a.m.dt||0)-(b.m.dt||0))});return S2}
-function standings(lid){const rows={};leagueTeams(lid).forEach(t=>rows[t.id]={t,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0,form:[]});
-  D.matches.filter(m=>m.league_id===lid&&confirmed(m)).sort((a,b)=>(a.dt||0)-(b.dt||0)||a.giornata-b.giornata).forEach(m=>{const H=rows[m.home_id],A=rows[m.away_id];if(!H||!A)return;const hg=m.gol_casa,ag=m.gol_trasferta;
+function standings(lid,tl,ml){const rows={};const base=ml||D.matches.filter(m=>m.league_id===lid);(tl||leagueTeams(lid)).forEach(t=>rows[t.id]={t,p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0,form:[]});
+  base.filter(confirmed).sort((a,b)=>(a.dt||0)-(b.dt||0)||a.giornata-b.giornata).forEach(m=>{const H=rows[m.home_id],A=rows[m.away_id];if(!H||!A)return;const hg=m.gol_casa,ag=m.gol_trasferta;
     H.p++;A.p++;H.gf+=hg;H.ga+=ag;A.gf+=ag;A.ga+=hg;
     if(hg>ag){H.w++;A.l++;H.pts+=3;H.form.push('V');A.form.push('P')}else if(hg<ag){A.w++;H.l++;A.pts+=3;A.form.push('V');H.form.push('P')}else{H.d++;A.d++;H.pts++;A.pts++;H.form.push('N');A.form.push('N')}});
   const list=Object.values(rows).map(r=>({...r,gd:r.gf-r.ga,form:r.form.slice(-5)}));
   // classifica avulsa: a pari punti contano punti e differenza reti negli scontri diretti, poi diff. reti generale e gol fatti
-  const ms=D.matches.filter(m=>m.league_id===lid&&confirmed(m));
+  const ms=base.filter(confirmed);
   const byPts={};list.forEach(r=>(byPts[r.pts]=byPts[r.pts]||[]).push(r));
   Object.values(byPts).forEach(g=>{const ids=new Set(g.map(r=>r.t.id));g.forEach(r=>{r.hp=0;r.hd=0});
     if(g.length<2)return;const R2=Object.fromEntries(g.map(r=>[r.t.id,r]));
@@ -377,7 +378,7 @@ function vCalendario(){const L=Lg(S.league);if(!L)return vHome();const lid=L.id,
   ${S.teamFilter?'':`<div class="chips mb" id="rchips">${chips}</div>`}
   <div class="card"><div class="hd">${S.teamFilter?esc(T(S.teamFilter).nome)+' · tutte le partite':`Giornata ${S.round}`}</div>${list.map(m=>mrow(m,!!S.teamFilter)).join('')||'<div class="empty">Nessuna partita</div>'}</div>`}
 
-function vPartita(id){const m=M(id);if(!m)return vHome();const H=T(m.home_id),A=T(m.away_id);if(!H||!A)return vHome();if(!m.turno)S.league=m.league_id;
+function vPartita(id){const m=M(id);if(!m)return vHome();const H=T(m.home_id),A=T(m.away_id);if(!H||!A)return vHome();if(!isCupM(m))S.league=m.league_id;
   const show=m.stato!=='da_giocare'&&m.gol_casa!=null;let ev='',rat='',motm='';
   if(show){const evs=D.events.filter(e=>e.match_id===m.id).sort((a,b)=>(a.minuto||0)-(b.minuto||0));
     ev=evs.length?evs.map(e=>{const s=P(e.marcatore_id),a=P(e.assist_id);const txt=`⚽ <b>${esc(s?.gamertag||'?')}</b>${a?`<small>assist ${esc(a.gamertag)}</small>`:''}`;const mn=e.minuto?e.minuto+"'":'';return e.team_id===m.home_id?`<div class="ev"><div class="lft">${txt}</div><div class="min">${mn}</div><div></div></div>`:`<div class="ev"><div></div><div class="min">${mn}</div><div class="r">${txt}</div></div>`}).join(''):(m.gol_casa+m.gol_trasferta?'<div class="empty">Marcatori non inseriti</div>':'<div class="empty">Nessun gol</div>');
@@ -387,7 +388,7 @@ function vPartita(id){const m=M(id);if(!m)return vHome();const H=T(m.home_id),A=
     const mp=P(m.motm_id);if(mp)motm=`<div class="card mb"><div class="motm"><div class="st">⭐</div><div class="sp"><div class="mut cond" style="font-weight:700;font-size:13px">Man of the Match</div><b style="font-size:18px">${esc(mp.gamertag)}</b></div>${rt(D.mp.find(x=>x.match_id===m.id&&x.player_id===mp.id)?.voto)}</div></div>`}
   const canAct=ME&&(isAdmin()||[m.home_id,m.away_id].includes(ME.team?.id));
   return `<div class="row mb"><a class="lnk" href="#calendario" onclick="S.round=${m.giornata};S.teamFilter=0">← Giornata ${m.giornata}</a><span class="sp"></span>${statoTag(m)}${orarioTag(m)}${isAdmin()&&m.stato==='da_giocare'?`<button class="btn sm sec" onclick="adminDate(${m.id})">Cambia data</button>`:''}${canAct?`<a class="btn sm sec" href="#area">Gestisci</a>`:''}</div>
-  <div class="card mb"><div class="pad mut" style="text-align:center;padding-bottom:0;font-size:12px">${esc(Lg(m.league_id)?.nome)} · ${m.turno?cupRoundName(m.league_id,m.turno):'Giornata '+m.giornata}${m.turno&&confirmed(m)&&m.gol_casa===m.gol_trasferta&&m.vincitore_id?' · Passa '+esc(T(m.vincitore_id)?.nome)+' (golden gol)':''} · ${fmtD(m.dt)} ${fmtT(m.dt)}</div>
+  <div class="card mb"><div class="pad mut" style="text-align:center;padding-bottom:0;font-size:12px">${esc(Lg(m.league_id)?.nome)} · ${m.turno?cupRoundName(m.league_id,m.turno):m.girone?'Girone '+GL(m.girone)+' · Giornata '+m.giornata:'Giornata '+m.giornata}${m.turno&&confirmed(m)&&m.gol_casa===m.gol_trasferta&&m.vincitore_id?' · Passa '+esc(T(m.vincitore_id)?.nome)+' (golden gol)':''} · ${fmtD(m.dt)} ${fmtT(m.dt)}</div>
   <div class="sb"><div class="side" onclick="go('#squadra-${H.id}')">${crest(H,58)}<b>${esc(H.nome)}</b></div><div style="text-align:center"><div class="big" ${show&&!confirmed(m)?'style="color:var(--gold)"':''}>${show?`${m.gol_casa}-${m.gol_trasferta}`:'VS'}</div><div class="mut" style="font-size:12px">${confirmed(m)?'Finale':show?'In attesa di conferma':'Da giocare'}</div></div><div class="side" onclick="go('#squadra-${A.id}')">${crest(A,58)}<b>${esc(A.nome)}</b></div></div>
   ${show?`<div style="border-top:1px solid var(--line);padding:6px 0">${ev}</div>`:`<div class="empty" style="border-top:1px solid var(--line)">Il risultato verrà inserito da un manager a fine partita e confermato dall'avversario.</div>`}</div>
   ${motm}${rat}${canAct&&!confirmed(m)?contactCard(m,H,A):''}${varCard(m)}${screensCard(m)}`}
@@ -639,7 +640,7 @@ async function delShot(id){const x=D.screens.find(s=>s.id===id);if(!x||!confirm(
 
 /* ---------- orari ---------- */
 function orariCard(t,mine){const now=new Date(),lim=new Date(weekStart(now).getTime()+14*864e5);
-  const list=mine.filter(m=>!m.turno&&m.stato==='da_giocare'&&m.dt&&m.dt<lim&&new Date(weekStart(m.dt).getTime()+7*864e5)>now).sort((a,b)=>a.dt-b.dt);
+  const list=mine.filter(m=>!isCupM(m)&&m.stato==='da_giocare'&&m.dt&&m.dt<lim&&new Date(weekStart(m.dt).getTime()+7*864e5)>now).sort((a,b)=>a.dt-b.dt);
   if(!list.length)return'';
   const row=m=>{const pr=propOf(m.id),casa=m.home_id===t.id,opp=T(casa?m.away_id:m.home_id),dl=new Date(weekStart(m.dt).getTime()+864e5);let body;
     if(pr?.scelta)body=`<span class="tag g">✓ Si gioca ${fmtDT(new Date(pr.scelta))}</span>`;
@@ -770,6 +771,9 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='
 const PARENT={partita:'calendario',squadra:'squadre',giocatore:'statistiche',registrati:'accedi',admin:'area'};
 
 /* ===== IVPL CUP ===== */
+const GL=g=>'ABCDEFGH'[g-1]||g;
+const cupGroups=cid=>{const G={};D.matches.filter(m=>m.league_id===cid&&m.girone).forEach(m=>{(G[m.girone]=G[m.girone]||{ms:[],ids:new Set()}).ms.push(m);G[m.girone].ids.add(m.home_id);G[m.girone].ids.add(m.away_id)});return G};
+const cupTime=(C,k)=>C.data_evento?new Date(new Date(C.data_evento).getTime()+k*(C.minuti_turno||30)*6e4):null;
 const curCup=()=>D.cups?.length?D.cups.reduce((a,b)=>b.id>a.id?b:a):null;
 const cupTab=cid=>(D.cupTab||[]).filter(x=>x.league_id===cid).sort((a,b)=>a.pos-b.pos);
 const cupRounds=cid=>{const n=cupTab(cid).length;return n<2?0:Math.round(Math.log2(n))};
@@ -790,7 +794,11 @@ function vCoppa(){const C=curCup();if(!C)return `<div class="empty">Nessuna copp
       :`<button class="btn" style="margin-top:12px;width:100%" onclick="cupJoin(${C.id},true)">Iscrivi ${esc(my.nome)} gratis</button>`}
   else if(ME&&!my&&!tab.length&&C.iscrizioni_aperte)act=`<div class="mut" style="margin-top:10px">Solo i manager possono iscrivere la squadra.</div>`;
   const head=`<div class="h1">🏆 ${esc(C.nome)}</div><div class="card mb pad"><div><b>${de?fmtD(de)+' · inizio '+fmtT(de):'Data da annunciare'}</b></div>
-   <div class="mut" style="font-size:13px;margin-top:6px;line-height:1.5">Torneo a eliminazione diretta in una sola serata · <b>iscrizione gratuita</b> · partita secca, un turno ogni 45 minuti · minimo 7 giocatori.<br>In caso di pareggio si rigioca subito una partita a <b>golden gol</b>: chi segna per primo passa il turno. Il risultato si inserisce sul sito come nel campionato.</div>${act}</div>`;
+   <div class="mut" style="font-size:13px;margin-top:6px;line-height:1.5">${C.formato==='gironi'?'Fase a gironi e poi eliminazione diretta: passano le prime 2 di ogni girone (a pari punti: scontri diretti, differenza reti, gol fatti)':'Torneo a eliminazione diretta'} in una sola serata · <b>iscrizione gratuita</b> · un turno ogni ${C.minuti_turno||30} minuti · minimo 7 giocatori.<br>Nella fase a eliminazione, in caso di pareggio si rigioca subito una partita a <b>golden gol</b>: chi segna per primo passa il turno. Il risultato si inserisce sul sito come nel campionato.</div>${act}</div>`;
+  const G=cupGroups(C.id),gk=Object.keys(G).map(Number).sort((a,b)=>a-b);
+  const groupsHTML=gk.map(g=>{const st=standings(C.id,[...G[g].ids].map(T).filter(Boolean),G[g].ms);
+    return `<div class="card mb"><div class="hd">Girone ${GL(g)}</div><table class="tbl" style="width:100%"><tr><th style="text-align:left">Squadra</th><th>G</th><th>DR</th><th>PT</th></tr>${st.map((r,i)=>`<tr style="${i<2?'':'opacity:.6'}"><td><div class="team">${crest(r.t,20)}<span>${esc(r.t.nome)}</span>${i<2?' <span style="color:var(--acc);font-size:11px">●</span>':''}</div></td><td style="text-align:center">${r.p}</td><td style="text-align:center">${r.gd>0?'+':''}${r.gd}</td><td style="text-align:center"><b>${r.pts}</b></td></tr>`).join('')}</table>${G[g].ms.slice().sort((a,b)=>a.giornata-b.giornata||a.id-b.id).map(m=>mrow(m)).join('')}</div>`}).join('');
+  if(!tab.length&&gk.length)return head+`<div class="mut" style="font-size:12px;margin:0 0 8px">● = posizione che vale la fase finale</div>`+groupsHTML+`<div class="card mb pad mut" style="text-align:center">Fase finale: ${cupTime(C,C.turni_gironi||3)?'dalle '+fmtT(cupTime(C,C.turni_gironi||3)):'dopo i gironi'}, appena finiti i gironi.</div>`;
   if(!tab.length)return head+`<div class="card"><div class="hd">Squadre iscritte (${isc.length})</div>${isc.map(x=>{const t=T(x.team_id);return t?`<div class="list-row">${crest(t,26)}<a href="#squadra-${t.id}" class="sp"><b>${esc(t.nome)}</b></a></div>`:''}).join('')||'<div class="empty">Ancora nessuna squadra: iscriviti per primo!</div>'}</div>`;
   const ch=cupSlot(C.id,R,0);
   const nm=id=>{const t=T(id);return t?`${crest(t,22)}<span>${esc(t.nome)}</span>`:''};
@@ -800,37 +808,61 @@ function vCoppa(){const C=curCup();if(!C)return `<div class="empty">Nessuna copp
       if(!m){rows+=`<div class="list-row"><div class="team sp">${a?nm(a):'<span class="mut">In attesa</span>'}</div><b class="mut">vs</b><div class="team sp" style="justify-content:flex-end">${b?nm(b):'<span class="mut">In attesa</span>'}</div></div>`;continue}
       const w=cupWinner(m),sc=m.gol_casa!=null&&m.stato!=='da_giocare'?`${m.gol_casa}-${m.gol_trasferta}`:fmtT(m.dt);
       rows+=`<a class="list-row" href="#partita-${m.id}" style="text-decoration:none;color:inherit"><div class="team sp" style="${w&&w!==m.home_id?'opacity:.45':''}">${nm(m.home_id)}</div><b style="min-width:54px;text-align:center">${sc}</b><div class="team sp" style="justify-content:flex-end;${w&&w!==m.away_id?'opacity:.45':''}">${nm(m.away_id)}</div></a>${w&&m.gol_casa===m.gol_trasferta?`<div class="mut" style="font-size:11px;text-align:center;margin-top:-6px;padding-bottom:6px">golden gol: passa ${esc(T(w)?.nome)}</div>`:''}`}
-    br+=`<div class="card mb"><div class="hd">${cupRoundName(C.id,r)}${de?`<span class="mut" style="font-size:12px">${fmtT(new Date(de.getTime()+(r-1)*45*6e4))}</span>`:''}</div>${rows}</div>`}
-  return head+(ch?`<div class="card mb pad" style="text-align:center;border-color:var(--gold)"><div style="font-size:40px">🏆</div><div class="mut">Vincitore</div><div style="display:flex;justify-content:center;margin-top:6px" class="team">${nm(ch)}</div></div>`:'')+br}
+    br+=`<div class="card mb"><div class="hd">${cupRoundName(C.id,r)}${de?`<span class="mut" style="font-size:12px">${fmtT(cupTime(C,(C.turni_gironi||0)+r-1))}</span>`:''}</div>${rows}</div>`}
+  return head+(gk.length?`<details class="mb"><summary class="mut" style="padding:8px 0;cursor:pointer">Vedi i gironi</summary>${groupsHTML}</details>`:'')+(ch?`<div class="card mb pad" style="text-align:center;border-color:var(--gold)"><div style="font-size:40px">🏆</div><div class="mut">Vincitore</div><div style="display:flex;justify-content:center;margin-top:6px" class="team">${nm(ch)}</div></div>`:'')+br}
 async function cupJoin(cid,on){const tid=ME.team.id;act(on?sb.from('coppa_iscrizioni').insert({league_id:cid,team_id:tid}):sb.from('coppa_iscrizioni').delete().eq('league_id',cid).eq('team_id',tid),on?'Squadra iscritta alla coppa!':'Iscrizione ritirata')}
 function cupAdmin(){const C=curCup();
   const newForm=`<div class="row" style="margin-top:8px"><input id="cupn" value="IVPL Cup" style="flex:1"><button class="btn sm" onclick="cupCreate()">Crea nuova coppa</button></div>`;
   if(!C)return `<div class="card mb"><div class="hd">🏆 Coppa (torneo di una serata)</div><div class="pad"><div class="mut" style="font-size:12px">Crea una coppa gratuita: i manager iscrivono la squadra, tu generi il tabellone e il sito fa avanzare da solo le vincenti.</div>${newForm}</div></div>`;
-  const tab=cupTab(C.id),isc=(D.cupIsc||[]).filter(x=>x.league_id===C.id),de=C.data_evento?new Date(C.data_evento):null;
+  const tab=cupTab(C.id),isc=(D.cupIsc||[]).filter(x=>x.league_id===C.id),de=C.data_evento?new Date(C.data_evento):null,G=cupGroups(C.id),gk=Object.keys(G);
+  const gDone=gk.length&&gk.every(g=>G[g].ms.every(confirmed));
   return `<div class="card mb"><div class="hd">🏆 ${esc(C.nome)}<a href="#coppa">Apri</a></div><div class="pad">
    <label class="f">Data e ora di inizio</label><div class="row"><input type="datetime-local" id="cupd" value="${de?toLocalInput(de):''}" style="flex:1"><button class="btn sm" onclick="cupDate(${C.id})">Salva</button></div>
+   ${tab.length||gk.length?`<div class="mut" style="font-size:12px;margin-top:8px">Formato: ${C.formato==='gironi'?'gironi + eliminazione':'eliminazione diretta'} · un turno ogni ${C.minuti_turno} minuti</div>`:`<div class="row" style="margin-top:8px"><select id="cupf" style="flex:1"><option value="gironi" ${C.formato==='gironi'?'selected':''}>Gironi + eliminazione (min. 6 squadre)</option><option value="eliminazione" ${C.formato!=='gironi'?'selected':''}>Solo eliminazione diretta</option></select><select id="cupm"><option ${C.minuti_turno==25?'selected':''}>25</option><option ${C.minuti_turno==30?'selected':''}>30</option><option ${C.minuti_turno==35?'selected':''}>35</option><option ${C.minuti_turno==40?'selected':''}>40</option><option ${C.minuti_turno==45?'selected':''}>45</option></select><button class="btn sm" onclick="cupFmt(${C.id})">Salva</button></div><div class="mut" style="font-size:11px;margin-top:4px">Minuti tra un turno e l'altro (partita + lobby).</div>`}
    <div class="row" style="margin-top:10px;align-items:center"><span class="sp">Iscrizioni: <b>${C.iscrizioni_aperte?'aperte':'chiuse'}</b> · ${isc.length} squadre</span>${tab.length?'':`<button class="btn sm sec" onclick="cupOpen(${C.id},${!C.iscrizioni_aperte})">${C.iscrizioni_aperte?'Chiudi':'Riapri'}</button>`}</div>
-   ${tab.length?'':isc.map(x=>{const t=T(x.team_id);return t?`<div class="list-row">${crest(t,22)}<span class="sp">${esc(t.nome)}</span><button class="btn red sm" onclick="cupKick(${C.id},${t.id})">Togli</button></div>`:''}).join('')}
-   ${tab.length?`<div class="mut" style="font-size:12px;margin-top:10px">Tabellone generato. Le vincenti avanzano da sole quando il risultato viene confermato.</div><button class="btn red sm" style="margin-top:8px" onclick="cupReset(${C.id})">Annulla tabellone e partite</button>`
-     :`<button class="btn" style="margin-top:10px;width:100%" onclick="cupGenerate(${C.id})" ${isc.length<2?'disabled':''}>Genera tabellone (sorteggio)</button>`}
+   ${tab.length||gk.length?'':isc.map(x=>{const t=T(x.team_id);return t?`<div class="list-row">${crest(t,22)}<span class="sp">${esc(t.nome)}</span><button class="btn red sm" onclick="cupKick(${C.id},${t.id})">Togli</button></div>`:''}).join('')}
+   ${!tab.length&&gk.length?`<div class="mut" style="font-size:12px;margin-top:10px">Gironi in corso: quando tutti i risultati sono confermati, genera la fase finale.</div><button class="btn" style="margin-top:8px;width:100%" onclick="cupKO(${C.id})" ${gDone?'':'disabled'}>Genera fase finale</button><button class="btn red sm" style="margin-top:8px" onclick="cupReset(${C.id})">Annulla gironi e partite</button>`:
+   tab.length?`<div class="mut" style="font-size:12px;margin-top:10px">Tabellone generato. Le vincenti avanzano da sole quando il risultato viene confermato.</div><button class="btn red sm" style="margin-top:8px" onclick="cupReset(${C.id})">Annulla tabellone e partite</button>`
+     :`<button class="btn" style="margin-top:10px;width:100%" onclick="cupGenerate(${C.id})" ${isc.length<2?'disabled':''}>${C.formato==='gironi'?'Sorteggia i gironi':'Genera tabellone (sorteggio)'}</button>`}
+   <button class="btn red sm" style="margin-top:14px" onclick="cupDelete(${C.id})">🗑 Elimina questa coppa</button>
    <div class="mut" style="font-size:12px;margin-top:14px">Nuova edizione:</div>${newForm}</div></div>`}
 function cupCreate(){const n=document.getElementById('cupn').value.trim()||'IVPL Cup';act(sb.from('leagues').insert({nome:n,tipo:'coppa',ordine:99}),'Coppa creata')}
 function cupOpen(cid,on){act(sb.from('leagues').update({iscrizioni_aperte:on}).eq('id',cid),on?'Iscrizioni riaperte':'Iscrizioni chiuse')}
 function cupKick(cid,tid){if(confirm('Togliere la squadra dalla coppa?'))act(sb.from('coppa_iscrizioni').delete().eq('league_id',cid).eq('team_id',tid),'Squadra tolta')}
 async function cupDate(cid){const v=document.getElementById('cupd').value;if(!v)return toast('Scegli data e ora');const d=new Date(v);
   try{let r=await sb.from('leagues').update({data_evento:d.toISOString()}).eq('id',cid);if(r.error)throw r.error;
-    for(const m of D.matches.filter(m=>m.league_id===cid&&m.stato==='da_giocare')){r=await sb.from('matches').update({data:new Date(d.getTime()+(m.turno-1)*45*6e4).toISOString()}).eq('id',m.id);if(r.error)throw r.error}
+    for(const m of D.matches.filter(m=>m.league_id===cid&&m.stato==='da_giocare')){const C=Lg(cid),k=m.girone?m.giornata-1:(C.turni_gironi||0)+m.turno-1;r=await sb.from('matches').update({data:new Date(d.getTime()+k*(C.minuti_turno||30)*6e4).toISOString()}).eq('id',m.id);if(r.error)throw r.error}
     await refresh();toast('Data salvata')}catch(e){toast(errIt(e))}}
 async function cupGenerate(cid){const C=Lg(cid),isc=(D.cupIsc||[]).filter(x=>x.league_id===cid).map(x=>x.team_id);
   if(!C.data_evento)return toast('Prima imposta data e ora di inizio');if(isc.length<2)return toast('Servono almeno 2 squadre');if(isc.length>16)return toast('Massimo 16 squadre: togline qualcuna');
+  if(C.formato==='gironi'){if(isc.length<6)return toast('Per i gironi servono almeno 6 squadre: cambia formato o aspetta altre iscrizioni');return cupGroupsGen(C,isc)}
   if(!confirm(`Sorteggio tra ${isc.length} squadre e chiusura iscrizioni. Procedo?`))return;
   const t=isc.slice().sort(()=>Math.random()-.5);let P=2;while(P<t.length)P*=2;const byes=P-t.length,pairs=P/2,byeAt=new Set([...Array(byes)].map((_,k)=>Math.floor(k*pairs/byes)));
   const rows=[];let k=0;for(let j=0;j<pairs;j++){rows.push({league_id:cid,pos:2*j,team_id:t[k++]});rows.push({league_id:cid,pos:2*j+1,team_id:byeAt.has(j)?null:t[k++]})}
   try{let r=await sb.from('coppa_tabellone').insert(rows);if(r.error)throw r.error;r=await sb.from('leagues').update({iscrizioni_aperte:false}).eq('id',cid);if(r.error)throw r.error;
     r=await sb.rpc('avanza_coppa',{p:cid});if(r.error)throw r.error;await refresh();toast('Tabellone generato!');go('#coppa')}catch(e){toast(errIt(e))}}
+async function cupDelete(cid){if(!confirm('Elimino la coppa con iscrizioni, gironi, tabellone e partite. Non si può annullare. Sicuro?'))return;
+  try{let r=await sb.from('matches').delete().eq('league_id',cid);if(r.error)throw r.error;r=await sb.from('leagues').delete().eq('id',cid);if(r.error)throw r.error;await refresh();toast('Coppa eliminata')}catch(e){toast(errIt(e))}}
+function cupFmt(cid){act(sb.from('leagues').update({formato:document.getElementById('cupf').value,minuti_turno:+document.getElementById('cupm').value}).eq('id',cid),'Formato salvato')}
+async function cupGroupsGen(C,isc){const n=isc.length,g=n<=8?2:n<=11?3:4;
+  if(!confirm(`Sorteggio di ${n} squadre in ${g} gironi (passano le prime 2) e chiusura iscrizioni. Procedo?`))return;
+  const t=isc.slice().sort(()=>Math.random()-.5),groups=[...Array(g)].map(()=>[]);t.forEach((x,i)=>groups[i%g].push(x));
+  const RR=[[[0,3],[1,2]],[[0,2],[3,1]],[[0,1],[2,3]]],rows=[],base=new Date(C.data_evento).getTime(),mt=C.minuti_turno||30;
+  groups.forEach((gr,gi)=>RR.forEach((pairs,ri)=>pairs.forEach(([a,b])=>{if(gr[a]!=null&&gr[b]!=null)rows.push({league_id:C.id,giornata:ri+1,girone:gi+1,home_id:gr[a],away_id:gr[b],data:new Date(base+ri*mt*6e4).toISOString()})})));
+  try{let r=await sb.from('matches').insert(rows);if(r.error)throw r.error;r=await sb.from('leagues').update({iscrizioni_aperte:false,turni_gironi:3}).eq('id',C.id);if(r.error)throw r.error;
+    await refresh();toast('Gironi sorteggiati!');go('#coppa')}catch(e){toast(errIt(e))}}
+async function cupKO(cid){const G=cupGroups(cid),gk=Object.keys(G).map(Number).sort((a,b)=>a-b);
+  const st=gk.map(g=>standings(cid,[...G[g].ids].map(T).filter(Boolean),G[g].ms).map(r=>r.t.id));
+  const W=st.map(s=>s[0]),R=st.map(s=>s[1]),n=gk.length;let pairs;
+  if(n===2)pairs=[[W[0],R[1]],[W[1],R[0]]];
+  else if(n===3)pairs=[[W[0],null],[W[2],R[1]],[W[1],null],[R[0],R[2]]];
+  else pairs=[[W[0],R[1]],[W[2],R[3]],[W[1],R[0]],[W[3],R[2]]];
+  if(!confirm('Genero la fase finale con le prime 2 di ogni girone?'))return;
+  const rows=[];pairs.forEach(([a,b],j)=>{rows.push({league_id:cid,pos:2*j,team_id:a});rows.push({league_id:cid,pos:2*j+1,team_id:b})});
+  try{let r=await sb.from('coppa_tabellone').insert(rows);if(r.error)throw r.error;r=await sb.rpc('avanza_coppa',{p:cid});if(r.error)throw r.error;await refresh();toast('Fase finale generata!');go('#coppa')}catch(e){toast(errIt(e))}}
 async function cupReset(cid){if(!confirm('Elimino tabellone e TUTTE le partite della coppa (anche i risultati). Sicuro?'))return;
   try{let r=await sb.from('matches').delete().eq('league_id',cid);if(r.error)throw r.error;r=await sb.from('coppa_tabellone').delete().eq('league_id',cid);if(r.error)throw r.error;
-    r=await sb.from('leagues').update({iscrizioni_aperte:true}).eq('id',cid);if(r.error)throw r.error;await refresh();toast('Tabellone annullato')}catch(e){toast(errIt(e))}}
+    r=await sb.from('leagues').update({iscrizioni_aperte:true,turni_gironi:0}).eq('id',cid);if(r.error)throw r.error;await refresh();toast('Tabellone annullato')}catch(e){toast(errIt(e))}}
 function render(){const h=(location.hash||'#home').slice(1);const mm=h.match(/^([a-z]+)-(.+)$/);const v=mm?mm[1]:h,arg=mm?mm[2]:null;
   const views={home:()=>cupBanner()+vHome(),coppa:vCoppa,classifica:vClassifica,calendario:vCalendario,statistiche:vStatistiche,squadre:vSquadre,mercato:vMercato,accedi:vAccedi,registrati:vRegistrati,area:vArea,admin:vAdmin,
     partita:()=>vPartita(+arg),squadra:()=>vSquadra(+arg),giocatore:()=>vGiocatore(arg)};
