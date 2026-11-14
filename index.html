@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>IVPL — Italian Virtual Pro League</title>
+<link rel="icon" id="fav" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -155,6 +156,29 @@ label.f+input,label.f+select,label.f+textarea{width:100%}
 .list-row:last-child{border-bottom:0}
 .code{font-family:ui-monospace,monospace;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;word-break:break-all;font-size:12px}
 img.crest{object-fit:contain;border-radius:4px}
+.hlogo svg{display:block}
+.gate{max-width:440px;margin:10px auto 30px;text-align:center}
+.gate .tit{font:800 30px/1 'Barlow Condensed';text-transform:uppercase;letter-spacing:.6px;margin-top:6px}
+.gate .stit{color:var(--muted);font-size:13px;margin:6px 0 16px}
+.gate form{text-align:left}
+.gtabs{display:grid;grid-template-columns:1fr 1fr;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:12px}
+.gtabs a{padding:9px;border-radius:7px;font:800 16px 'Barlow Condensed';text-transform:uppercase;color:var(--muted);text-align:center}
+.gtabs a.on{background:var(--acc);color:var(--ink)}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;padding:12px}
+.shot{position:relative;background:var(--bg2);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.shot img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;cursor:zoom-in}
+.shot small{display:block;padding:5px 7px;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shot .del{all:unset;cursor:pointer;position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);color:#fff;border-radius:6px;padding:1px 7px;font-size:14px}
+.upl{position:relative;overflow:hidden}.upl input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.bigshot{width:100%;border-radius:8px;display:block}
+.var{border-top:1px solid var(--line);padding:12px 14px}
+.var .vh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.var .vd{margin:8px 0;white-space:pre-wrap}
+.msg{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-top:6px;font-size:13px;white-space:pre-wrap}
+.msg.adm{border-color:rgba(245,179,1,.5)}
+.msg b{font-size:12px}.msg small{color:var(--muted);font-size:11px;margin-left:6px}
+.verdict{margin-top:10px;border:1px solid rgba(0,227,140,.4);background:rgba(0,227,140,.07);border-radius:8px;padding:10px}
+.verdict.no{border-color:rgba(255,77,94,.4);background:rgba(255,77,94,.07)}
 .days{display:flex;gap:6px;flex-wrap:wrap}
 .days label{display:flex;align-items:center;gap:4px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:13px}
 </style>
@@ -162,7 +186,7 @@ img.crest{object-fit:contain;border-radius:4px}
 <body>
 <header>
   <div class="top">
-    <a href="#home" class="brand"><span class="logo">IVPL</span><span><b id="sitename">ITALIAN VIRTUAL PRO LEAGUE</b><small>EA FC 27 · Pro Club</small></span></a>
+    <a href="#home" class="brand"><span class="hlogo" id="hlogo"></span><span><b id="sitename" style="display:none"></b><small>EA FC 27 · Pro Club</small></span></a>
     <div class="leagues" id="leagues"></div>
   </div>
   <nav id="nav"></nav>
@@ -178,6 +202,16 @@ const SITE_NAME = 'ITALIAN VIRTUAL PRO LEAGUE';
 /* ==================================================== */
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const LOGO_INNER = `
+<defs><linearGradient id="gr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00e38c"/><stop offset="1" stop-color="#00a86b"/></linearGradient></defs>
+<g transform="skewX(-12) translate(10,0)"><path d="M0 0H14V60H0ZM20 0H34L44 40L54 0H68L51 60H37ZM74 0H110L120 10V28L110 38H88V60H74ZM88 12V26H104L106 24V14L104 12ZM126 0H140V47H166V60H126Z" fill="url(#gr)" fill-rule="evenodd" stroke="#ffffff" stroke-width="4" stroke-linejoin="miter" paint-order="stroke" /><path d="M-4 30H176" stroke="#080c13" stroke-width="4"/></g>
+<path d="M2 74H62" stroke="#009246" stroke-width="5"/><path d="M62 74H120" stroke="#f1f2f1" stroke-width="5"/><path d="M120 74H178" stroke="#ce2b37" stroke-width="5"/>
+<text x="90" y="94" text-anchor="middle" font-family="Barlow Condensed, DejaVu Sans Condensed, Arial Narrow, sans-serif" font-weight="800" font-size="9.5" letter-spacing="1.6" fill="#ffffff">ITALIAN VIRTUAL PRO LEAGUE</text>`;
+let LOGO_N=0;
+const logoSVG=(h=40)=>{const k='lg'+(++LOGO_N)+'_';return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -6 190 104" height="${h}" width="${Math.round(h*190/104)}" aria-label="IVPL">${LOGO_INNER.replace(/id="([a-z]+)"/g,`id="${k}$1"`).replace(/url\(#([a-z]+)\)/g,`url(#${k}$1)`)}</svg>`};
+const favSVG=()=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -50 190 190"><rect x="-6" y="-50" width="190" height="190" rx="28" fill="#080c13"/>${LOGO_INNER.replace(/<text[\s\S]*?<\/text>/,'')}</svg>`;
+document.getElementById('hlogo').innerHTML=logoSVG(34);
+document.getElementById('fav').href='data:image/svg+xml,'+encodeURIComponent(favSVG());
 document.getElementById('sitename').textContent = SITE_NAME;
 document.title = 'IVPL — Italian Virtual Pro League';
 
@@ -187,7 +221,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const col=(c,d)=>/^#[0-9a-fA-F]{6}$/.test(c||'')?c:d;
 const byRole=(a,b)=>ROLES.indexOf(a.posizione)-ROLES.indexOf(b.posizione)||a.gamertag.localeCompare(b.gamertag);
 
-let D={leagues:[],teams:[],profiles:[],rosa:[],matches:[],events:[],mp:[],cand:[],inviti:[]};
+let D={vars:[],varmsg:[],screens:[],prop:[],leagues:[],teams:[],profiles:[],rosa:[],matches:[],events:[],mp:[],cand:[],inviti:[]};
 let STATS={};
 let ME=null; // {uid,email,p:profile,team:squadra che gestisco,inTeam:squadra in cui gioco}
 let S={league:null,statTab:'g',round:null,teamFilter:0};
@@ -198,6 +232,12 @@ const P=id=>D.profiles.find(p=>p.id===id);
 const M=id=>D.matches.find(m=>m.id===id);
 const Lg=id=>D.leagues.find(l=>l.id===id);
 const isAdmin=()=>ME?.p?.ruolo_utente==='admin';
+const propOf=mid=>D.prop.find(x=>x.match_id===mid);
+const weekStart=d=>{const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x};
+const pad2=n=>String(n).padStart(2,'0');
+const toLocalInput=d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+const fmtDT=d=>fmtD(d)+' '+fmtT(d);
+function orarioTag(m){if(m.stato!=='da_giocare')return'';const pr=propOf(m.id);return pr?.scelta?'<span class="tag g">Orario fissato</span>':pr?'<span class="tag y">Orario proposto</span>':'<span class="tag">Orario di riserva</span>'}
 const teamOf=pid=>{const r=D.rosa.find(x=>x.player_id===pid);return r?T(r.team_id):null};
 const rosterOf=tid=>D.rosa.filter(r=>r.team_id===tid).map(r=>P(r.player_id)).filter(Boolean).sort(byRole);
 const leagueTeams=lid=>D.teams.filter(t=>t.approvata&&t.league_id===lid);
@@ -205,9 +245,10 @@ const leagueTeams=lid=>D.teams.filter(t=>t.approvata&&t.league_id===lid);
 /* ---------- caricamento dati ---------- */
 async function loadAll(){
   const q=(t,cols='*')=>sb.from(t).select(cols);
-  const res=await Promise.all([q('leagues').order('ordine'),q('teams').order('nome'),q('profiles','id,gamertag,ruolo_utente,posizione,piattaforma,disponibilita,bio,creato_il'),q('rosa'),q('matches').order('giornata').order('id'),q('events'),q('match_players')]);
+  try{await sb.rpc('applica_orari_scaduti')}catch(e){}
+  const res=await Promise.all([q('var_segnalazioni').order('creata_il'),q('var_messaggi').order('creato_il'),q('match_screens').order('creato_il'),q('proposte_orario'),q('leagues').order('ordine'),q('teams').order('nome'),q('profiles','id,gamertag,ruolo_utente,posizione,piattaforma,disponibilita,bio,creato_il'),q('rosa'),q('matches').order('giornata').order('id'),q('events'),q('match_players')]);
   const bad=res.find(r=>r.error);if(bad)throw bad.error;
-  const [l,t,p,r,m,e,mp]=res.map(x=>x.data);
+  const [vs,vm,sc,pr,l,t,p,r,m,e,mp]=res.map(x=>x.data);D.vars=vs||[];D.varmsg=vm||[];D.prop=pr||[];D.screens=sc||[];
   m.forEach(x=>x.dt=x.data?new Date(x.data):null);
   D={...D,leagues:l,teams:t,profiles:p,rosa:r,matches:m,events:e,mp};
   if(!S.league||!Lg(S.league))S.league=l[0]?.id||null;
@@ -332,11 +373,11 @@ function vPartita(id){const m=M(id);if(!m)return vHome();const H=T(m.home_id),A=
     rat=`<div class="grid g2">${colTeam(H)}${colTeam(A)}</div>`;
     const mp=P(m.motm_id);if(mp)motm=`<div class="card mb"><div class="motm"><div class="st">⭐</div><div class="sp"><div class="mut cond" style="font-weight:700;font-size:13px">Man of the Match</div><b style="font-size:18px">${esc(mp.gamertag)}</b></div>${rt(D.mp.find(x=>x.match_id===m.id&&x.player_id===mp.id)?.voto)}</div></div>`}
   const canAct=ME&&(isAdmin()||[m.home_id,m.away_id].includes(ME.team?.id));
-  return `<div class="row mb"><a class="lnk" href="#calendario" onclick="S.round=${m.giornata};S.teamFilter=0">← Giornata ${m.giornata}</a><span class="sp"></span>${statoTag(m)}${canAct?`<a class="btn sm sec" href="#area">Gestisci</a>`:''}</div>
+  return `<div class="row mb"><a class="lnk" href="#calendario" onclick="S.round=${m.giornata};S.teamFilter=0">← Giornata ${m.giornata}</a><span class="sp"></span>${statoTag(m)}${orarioTag(m)}${isAdmin()&&m.stato==='da_giocare'?`<button class="btn sm sec" onclick="adminDate(${m.id})">Cambia data</button>`:''}${canAct?`<a class="btn sm sec" href="#area">Gestisci</a>`:''}</div>
   <div class="card mb"><div class="pad mut" style="text-align:center;padding-bottom:0;font-size:12px">${esc(Lg(m.league_id)?.nome)} · Giornata ${m.giornata} · ${fmtD(m.dt)} ${fmtT(m.dt)}</div>
   <div class="sb"><div class="side" onclick="go('#squadra-${H.id}')">${crest(H,58)}<b>${esc(H.nome)}</b></div><div style="text-align:center"><div class="big" ${show&&!confirmed(m)?'style="color:var(--gold)"':''}>${show?`${m.gol_casa}-${m.gol_trasferta}`:'VS'}</div><div class="mut" style="font-size:12px">${confirmed(m)?'Finale':show?'In attesa di conferma':'Da giocare'}</div></div><div class="side" onclick="go('#squadra-${A.id}')">${crest(A,58)}<b>${esc(A.nome)}</b></div></div>
   ${show?`<div style="border-top:1px solid var(--line);padding:6px 0">${ev}</div>`:`<div class="empty" style="border-top:1px solid var(--line)">Il risultato verrà inserito da un manager a fine partita e confermato dall'avversario.</div>`}</div>
-  ${motm}${rat}`}
+  ${motm}${rat}${varCard(m)}${screensCard(m)}`}
 
 function vStatistiche(){const L=Lg(S.league);if(!L)return vHome();const d=STATDEF[S.statTab];
   return `<div class="h1">Statistiche ${esc(L.nome)}</div><div class="chips mb">${Object.entries(STATDEF).map(([k,x])=>`<button class="chip ${S.statTab===k?'on':''}" onclick="S.statTab='${k}';render()">${x.lab}</button>`).join('')}</div>
@@ -370,12 +411,14 @@ function vMercato(){const recr=D.teams.filter(t=>t.approvata&&t.cerca_ruoli?.len
   <div class="card"><div class="hd">Svincolati (${fas.length})</div>${fas.map(faRow).join('')||'<div class="empty">Nessuno svincolato</div>'}</div></div>`}
 
 /* ================== ACCESSO E REGISTRAZIONE ================== */
+const gateHead=tab=>`<div style="display:flex;justify-content:center;margin:18px 0 8px">${logoSVG(118)}</div><div class="stit">Campionato Clubs 11 vs 11 · EA SPORTS FC 27</div>
+  <div class="gtabs"><a href="#accedi" class="${tab==='a'?'on':''}">Accedi</a><a href="#registrati" class="${tab==='r'?'on':''}">Iscriviti</a></div>${pendingInvite()?'<div class="note">Hai un invito per entrare in una squadra: accedi o iscriviti per accettarlo.</div>':''}`;
 function vAccedi(){if(ME)return vArea();
-  return `<div style="max-width:420px;margin:20px auto"><div class="h1" style="text-align:center">Accedi</div>${pendingInvite()?'<div class="note">Hai un invito per entrare in una squadra: accedi o iscriviti per accettarlo.</div>':''}
+  return `<div class="gate">${gateHead('a')}
   <form class="card pad" onsubmit="doLogin(event)"><label class="f">Email</label><input type="email" id="le" required autocomplete="email"><label class="f">Password</label><input type="password" id="lp" required autocomplete="current-password"><div id="lerr"></div><button class="btn full" type="submit">Accedi</button>
   <div class="row" style="margin-top:12px;justify-content:space-between"><a class="lnk" onclick="forgot()">Password dimenticata?</a><a class="lnk" href="#registrati">Non hai un account? Iscriviti</a></div></form></div>`}
 function vRegistrati(){if(ME)return vArea();
-  return `<div style="max-width:460px;margin:20px auto"><div class="h1" style="text-align:center">Iscriviti</div>${pendingInvite()?'<div class="note">Hai un invito per entrare in una squadra: dopo l\'iscrizione potrai accettarlo.</div>':''}
+  return `<div class="gate">${gateHead('r')}
   <form class="card pad" onsubmit="doSignup(event)"><div class="mut" style="font-size:12px">Come partecipi?</div>
   <div class="rolepick"><label><input type="radio" name="ruolo" value="giocatore" checked><div><b>Giocatore</b><small>Entro in una squadra</small></div></label><label><input type="radio" name="ruolo" value="manager"><div><b>Manager</b><small>Creo e gestisco una squadra</small></div></label></div>
   <label class="f">Gamertag / ID PSN (sarà il tuo nome nel sito)</label><input id="rg" required maxlength="24">
@@ -396,7 +439,7 @@ const showErr=(id,e)=>{const el=document.getElementById(id);if(el)el.innerHTML=`
 async function doLogin(ev){ev.preventDefault();const b=ev.submitter;b&&(b.textContent='Attendi…');
   const {error}=await sb.auth.signInWithPassword({email:document.getElementById('le').value.trim(),password:document.getElementById('lp').value});
   if(error){b&&(b.textContent='Accedi');return showErr('lerr',error)}
-  await refresh();go('#area');toast('Bentornato!');checkInvite()}
+  await refresh();go('#home');toast('Bentornato!');checkInvite()}
 async function doSignup(ev){ev.preventDefault();const b=ev.submitter;
   const ruolo=document.querySelector('input[name=ruolo]:checked').value,gt=document.getElementById('rg').value.trim();
   if(gt.length<3)return showErr('rerr',{message:'Il gamertag deve avere almeno 3 caratteri'});
@@ -406,14 +449,14 @@ async function doSignup(ev){ev.preventDefault();const b=ev.submitter;
     options:{data:{gamertag:gt,ruolo,posizione:document.getElementById('rp').value,piattaforma:document.getElementById('rpl').value},emailRedirectTo:location.origin+location.pathname}});
   if(error){b&&(b.textContent='Crea account');return showErr('rerr',error)}
   if(!data.session){document.getElementById('app').innerHTML=`<div style="max-width:440px;margin:30px auto" class="card pad"><div class="h1">Controlla la tua email</div><p>Ti abbiamo mandato un link per confermare l'account. Aprilo e poi torna qui ad accedere.</p><p class="mut" style="font-size:13px">Non la trovi? Guarda nella cartella spam.</p><a class="btn full" href="#accedi">Vai ad accedi</a></div>`;return}
-  await refresh();go('#area');toast('Benvenuto!');checkInvite()}
+  await refresh();go('#home');toast('Benvenuto!');checkInvite()}
 async function forgot(){const email=document.getElementById('le')?.value.trim();if(!email)return showErr('lerr',{message:'Scrivi prima la tua email qui sopra'});
   const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
   if(error)return showErr('lerr',error);toast('Ti abbiamo mandato un\'email per cambiare password')}
 function newPasswordModal(){openModal(`<h3>Nuova password</h3><label class="f">Scegli la nuova password</label><input type="password" id="np" minlength="6"><div id="nperr"></div><button class="btn full" onclick="setNewPw()">Salva</button>`)}
 async function setNewPw(){const pw=document.getElementById('np').value;if(pw.length<6)return showErr('nperr',{message:'Minimo 6 caratteri'});
   const {error}=await sb.auth.updateUser({password:pw});if(error)return showErr('nperr',error);closeModal();toast('Password aggiornata')}
-async function logout(){await sb.auth.signOut();await refresh();go('#home')}
+async function logout(){await sb.auth.signOut();await refresh();go('#accedi')}
 
 /* ---------- inviti ---------- */
 function pendingInvite(){try{return sessionStorage.getItem('pcl_inv')}catch(e){return null}}
@@ -453,6 +496,8 @@ function managerSection(){const t=ME.team;
   const toInsert=mine.filter(m=>!m.stato||m.stato==='da_giocare'||m.stato==='contestato').slice(0,4);
   const actRow=(m,btn)=>`<div class="row" style="padding-right:12px;border-bottom:1px solid rgba(35,47,71,.6)"><div class="sp" style="min-width:0">${mrow(m,true)}</div>${btn}</div>`;
   return `<div class="banner mb" style="background:linear-gradient(120deg,${col(t.colore1,'#1565c0')},#0b111b)">${crest(t,54)}<div class="sp"><div style="font-size:12px;opacity:.8">LA MIA SQUADRA</div><div class="n" style="font-size:28px">${esc(t.nome)}</div><div class="m">${t.approvata?esc(Lg(t.league_id)?.nome||'Campionato da assegnare'):'⏳ In attesa di approvazione del commissario'}</div></div><button class="btn sec sm" onclick="editTeam()">Modifica</button></div>
+  ${(()=>{const mv=D.vars.filter(v=>v.stato==='aperta'&&mine.some(m=>m.id===v.match_id));return mv.length?`<div class="card mb" style="border-color:var(--gold)"><div class="hd" style="color:var(--gold)">🎥 Sala VAR · segnalazioni in corso</div>${mv.map(v=>{const m=M(v.match_id);return `<div class="list-row"><div class="sp" style="min-width:0"><b>${esc(v.motivo)}</b><div class="mut" style="font-size:12px">G${m.giornata} · ${esc(T(m.home_id)?.nome)} - ${esc(T(m.away_id)?.nome)} · aperta da ${esc(T(v.team_id)?.sigla||'')}</div></div><a class="btn sm" href="#partita-${m.id}">Vai</a></div>`}).join('')}</div>`:''})()}
+  ${orariCard(t,mine)}
   ${toConfirm.length?`<div class="card mb" style="border-color:var(--gold)"><div class="hd" style="color:var(--gold)">Risultati da confermare</div>${toConfirm.map(m=>actRow(m,`<button class="btn sm" onclick="openConfirm(${m.id})">Controlla</button>`)).join('')}</div>`:''}
   <div class="grid g2 mb"><div class="card"><div class="hd">Inserisci risultato</div>${toInsert.map(m=>actRow(m,`<button class="btn sm" onclick="openResult(${m.id})">Inserisci</button>`)).join('')||'<div class="empty">Nessuna partita da inserire</div>'}</div>
   <div class="card"><div class="hd">In attesa dell'avversario</div>${waiting.map(m=>actRow(m,`<button class="btn sm sec" onclick="openResult(${m.id})">Modifica</button>`)).join('')||'<div class="empty">Nessuno</div>'}</div></div>
@@ -494,6 +539,98 @@ async function sendApply(tid){if(D.cand.some(c=>c.team_id===tid&&c.player_id===M
   if(error)return showErr('aperr',error);closeModal();await refresh();toast('Candidatura inviata')}
 async function copyText(t){try{await navigator.clipboard.writeText(t);toast('Copiato!')}catch(e){toast('Tieni premuto sul testo per copiarlo')}}
 
+/* ---------- sala VAR ---------- */
+const VAR_MOTIVI=['Risultato inserito errato','Giocatore non in rosa o squalificato','Disconnessione o lag','Ritardo o assenza avversario','Comportamento antisportivo','Altro'];
+const VAR_ESITI=['Risultato confermato','Risultato corretto dal commissario','Vittoria 3-0 a tavolino squadra di casa','Vittoria 0-3 a tavolino squadra ospite','Partita da rigiocare','Sanzione disciplinare','Segnalazione respinta'];
+const isMgrOf=m=>!!ME&&[m.home_id,m.away_id].includes(ME.team?.id);
+const varDeadline=m=>m.dt?new Date(m.dt.getTime()+864e5):null;
+const canOpenVar=m=>!!ME&&(isAdmin()||(isMgrOf(m)&&m.dt&&new Date()<=varDeadline(m)));
+const varTag=v=>v.stato==='aperta'?'<span class="tag y">In esame</span>':v.stato==='respinta'?'<span class="tag r">Respinta</span>':'<span class="tag g">Decisa</span>';
+function varCard(m){const list=D.vars.filter(v=>v.match_id===m.id);const dl=varDeadline(m);
+  if(!list.length&&!canOpenVar(m))return'';
+  return `<div class="card mb" style="margin-top:14px"><div class="hd">🎥 Sala VAR${list.length?' ('+list.length+')':''}${canOpenVar(m)?`<button class="btn sm" onclick="openVar(${m.id})">Apri segnalazione</button>`:''}</div>
+  ${isMgrOf(m)&&dl?`<div class="pad mut" style="font-size:12px;padding-bottom:${list.length?'10px':'14px'}">${new Date()<=dl?`Puoi aprire una segnalazione fino a ${fmtDT(dl)}. Allega le prove negli screenshot della partita.`:'Il tempo per aprire una segnalazione è scaduto.'}</div>`:''}
+  ${list.map(v=>varItem(v,m)).join('')}</div>`}
+function varItem(v,m){const t=T(v.team_id),p=P(v.aperta_da),msgs=D.varmsg.filter(x=>x.segnalazione_id===v.id);
+  const canWrite=v.stato==='aperta'&&(isAdmin()||isMgrOf(m));
+  return `<div class="var"><div class="vh"><b>${esc(v.motivo)}</b>${varTag(v)}<span class="sp"></span><span class="mut" style="font-size:11px">${t?esc(t.sigla)+' · ':''}${esc(p?.gamertag||'')} · ${fmtDT(new Date(v.creata_il))}</span></div>
+  <div class="vd">${esc(v.descrizione)}</div>
+  ${msgs.map(x=>{const a=P(x.autore);return `<div class="msg ${a?.ruolo_utente==='admin'?'adm':''}"><b>${esc(a?.gamertag||'?')}</b>${a?.ruolo_utente==='admin'?' <span class="tag y">Commissario</span>':''}<small>${fmtDT(new Date(x.creato_il))}</small><div>${esc(x.testo)}</div></div>`}).join('')}
+  ${v.stato!=='aperta'?`<div class="verdict ${v.stato==='respinta'?'no':''}"><b>Decisione del commissario: ${esc(v.esito||'')}</b>${v.decisione?`<div style="margin-top:4px;white-space:pre-wrap">${esc(v.decisione)}</div>`:''}<div class="mut" style="font-size:11px;margin-top:4px">${v.deciso_il?fmtDT(new Date(v.deciso_il)):''}</div></div>`:''}
+  ${canWrite?`<div class="row" style="margin-top:8px"><input id="vm${v.id}" placeholder="Scrivi un messaggio…" maxlength="1000" style="flex:1;min-width:160px"><button class="btn sm sec" onclick="sendVarMsg(${v.id})">Invia</button>${isAdmin()?`<button class="btn sm" onclick="decideVar(${v.id})">Decidi</button>`:''}</div>`:''}</div>`}
+function openVar(mid){openModal(`<h3>🎥 Apri segnalazione VAR</h3><div class="mut" style="font-size:12px">La segnalazione la vedono tutti. Il manager avversario può rispondere, il commissario decide.</div>
+  <label class="f">Motivo</label><select id="vmo" style="width:100%">${VAR_MOTIVI.map(x=>`<option>${x}</option>`).join('')}</select>
+  <label class="f">Cosa è successo</label><textarea id="vde" rows="4" maxlength="1500" placeholder="Spiega il problema: minuto, giocatori coinvolti, cosa chiedi al commissario…"></textarea>
+  <label class="f">Prove (screenshot o foto)</label><input type="file" id="vsh" accept="image/*" multiple style="width:100%">
+  <div id="verr"></div><button class="btn full" id="vbtn" onclick="sendVar(${mid})">Invia alla VAR</button>`)}
+async function sendVar(mid){const b=document.getElementById('vbtn'),de=document.getElementById('vde').value.trim();if(!de)return showErr('verr',{message:'Descrivi il problema'});
+  b.textContent='Invio…';const {error}=await sb.rpc('apri_var',{p_match:mid,p_motivo:document.getElementById('vmo').value,p_descrizione:de});
+  if(error){b.textContent='Invia alla VAR';return showErr('verr',error)}
+  const sh=[...document.getElementById('vsh').files];if(sh.length){try{await uploadScreens(mid,sh)}catch(e){toast(errIt(e))}}
+  closeModal();await refresh();toast('Segnalazione inviata al commissario')}
+async function sendVarMsg(id){const el=document.getElementById('vm'+id),t=el.value.trim();if(!t)return;
+  const {error}=await sb.from('var_messaggi').insert({segnalazione_id:id,autore:ME.uid,testo:t});if(error)return toast(errIt(error));await refresh();toast('Messaggio inviato')}
+function decideVar(id){const v=D.vars.find(x=>x.id===id),m=M(v.match_id);
+  openModal(`<h3>Decisione VAR</h3><div class="mut" style="font-size:12px">${esc(T(m.home_id).nome)} - ${esc(T(m.away_id).nome)} · ${esc(v.motivo)}</div>
+  <label class="f">Esito</label><select id="ves" style="width:100%">${VAR_ESITI.map(x=>`<option>${x}</option>`).join('')}</select>
+  <label class="f">Motivazione (la vedono tutti)</label><textarea id="vdec" rows="4" maxlength="1500"></textarea>
+  <div class="mut" style="font-size:12px;margin-top:8px">Con "a tavolino" e "da rigiocare" il sito aggiorna da solo il risultato. Con "Risultato corretto" dopo il salvataggio si apre la modifica del risultato.</div>
+  <div id="vderr"></div><button class="btn full" onclick="saveDecision(${id})">Pubblica decisione</button>`)}
+async function saveDecision(id){const v=D.vars.find(x=>x.id===id),m=M(v.match_id),esito=document.getElementById('ves').value,dec=document.getElementById('vdec').value.trim();
+  try{let r;
+    if(esito.includes('a tavolino')||esito==='Partita da rigiocare'){
+      r=await sb.from('events').delete().eq('match_id',m.id);if(r.error)throw r.error;
+      r=await sb.from('match_players').delete().eq('match_id',m.id);if(r.error)throw r.error;
+      const upd=esito==='Partita da rigiocare'?{gol_casa:null,gol_trasferta:null,motm_id:null,stato:'da_giocare',inserito_da:null}:{gol_casa:esito.includes('3-0')?3:0,gol_trasferta:esito.includes('3-0')?0:3,motm_id:null,stato:'confermato'};
+      r=await sb.from('matches').update(upd).eq('id',m.id);if(r.error)throw r.error;
+      if(esito==='Partita da rigiocare'){await sb.from('proposte_orario').delete().eq('match_id',m.id)}}
+    r=await sb.from('var_segnalazioni').update({stato:esito==='Segnalazione respinta'?'respinta':'decisa',esito,decisione:dec||null,deciso_il:new Date().toISOString()}).eq('id',id);if(r.error)throw r.error;
+    closeModal();await refresh();toast('Decisione pubblicata');if(esito==='Risultato corretto dal commissario')openResult(m.id,true)}
+  catch(e){showErr('vderr',e)}}
+
+/* ---------- screenshot ---------- */
+const canUpload=m=>!!ME&&(isAdmin()||[m.home_id,m.away_id].includes(ME.team?.id)||[m.home_id,m.away_id].includes(ME.inTeam?.id));
+function screensCard(m){const list=D.screens.filter(x=>x.match_id===m.id),up=canUpload(m);
+  return `<div class="card mb" style="margin-top:14px"><div class="hd">Screenshot partita (${list.length})${up?`<span class="btn sm upl">+ Carica<input type="file" accept="image/*" multiple onchange="addScreens(${m.id},this)"></span>`:''}</div>
+  ${list.length?`<div class="shots">${list.map(x=>{const t=T(x.team_id),p=P(x.caricato_da);return `<div class="shot"><img src="${esc(x.url)}" loading="lazy" alt="" onclick="viewShot(${x.id})">${ME&&(x.caricato_da===ME.uid||isAdmin())?`<button class="del" onclick="delShot(${x.id})" aria-label="Elimina">×</button>`:''}<small>${t?esc(t.sigla)+' · ':''}${esc(p?.gamertag||'')} · ${fmtDT(new Date(x.creato_il))}</small></div>`}).join('')}</div>`:`<div class="empty">${up?'Carica qui gli screenshot: lobby, schermata finale con i voti, eventuali problemi.':'Nessuno screenshot caricato.'}</div>`}</div>`}
+async function compressImg(f,max=1600,q=.82){try{const b=await createImageBitmap(f);const k=Math.min(1,max/Math.max(b.width,b.height));const c=document.createElement('canvas');c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);c.getContext('2d').drawImage(b,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(x=>r(x||f),'image/jpeg',q))}catch(e){return f}}
+async function uploadScreens(mid,files){const m=M(mid);const tid=[m.home_id,m.away_id].find(id=>id===ME.team?.id||id===ME.inTeam?.id)||null;
+  for(const f of files){if(!f.type.startsWith('image/'))continue;const blob=await compressImg(f);const path=`${mid}/${ME.uid}-${Date.now()}-${Math.random().toString(36).slice(2,7)}.jpg`;
+    let r=await sb.storage.from('screenshot').upload(path,blob,{contentType:'image/jpeg'});if(r.error)throw r.error;
+    const url=sb.storage.from('screenshot').getPublicUrl(path).data.publicUrl;
+    r=await sb.from('match_screens').insert({match_id:mid,team_id:tid,caricato_da:ME.uid,url,path});if(r.error)throw r.error}}
+async function addScreens(mid,inp){const files=[...inp.files];if(!files.length)return;toast('Caricamento in corso…');
+  try{await uploadScreens(mid,files);await refresh();toast(files.length>1?'Screenshot caricati':'Screenshot caricato')}catch(e){toast(errIt(e))}}
+function viewShot(id){const x=D.screens.find(s=>s.id===id);if(!x)return;openModal(`<img class="bigshot" src="${esc(x.url)}" alt=""><div class="mut" style="font-size:12px;margin-top:8px">${esc(P(x.caricato_da)?.gamertag||'')} · ${fmtDT(new Date(x.creato_il))}</div>`)}
+async function delShot(id){const x=D.screens.find(s=>s.id===id);if(!x||!confirm('Eliminare questo screenshot?'))return;
+  await sb.storage.from('screenshot').remove([x.path]);act(sb.from('match_screens').delete().eq('id',id),'Screenshot eliminato')}
+
+/* ---------- orari ---------- */
+function orariCard(t,mine){const now=new Date(),lim=new Date(weekStart(now).getTime()+14*864e5);
+  const list=mine.filter(m=>m.stato==='da_giocare'&&m.dt&&m.dt<lim&&new Date(weekStart(m.dt).getTime()+7*864e5)>now).sort((a,b)=>a.dt-b.dt);
+  if(!list.length)return'';
+  const row=m=>{const pr=propOf(m.id),casa=m.home_id===t.id,opp=T(casa?m.away_id:m.home_id),dl=new Date(weekStart(m.dt).getTime()+864e5);let body;
+    if(pr?.scelta)body=`<span class="tag g">✓ Si gioca ${fmtDT(new Date(pr.scelta))}</span>`;
+    else if(pr&&pr.team_id===t.id)body=`<div class="mut" style="font-size:12px">Hai proposto: ${pr.opzioni.map(o=>fmtDT(new Date(o))).join(' · ')}<br>${esc(opp.nome)} deve scegliere entro ${fmtDT(new Date(new Date(pr.creata_il).getTime()+864e5))}, altrimenti vale il primo.</div>`;
+    else if(pr)body=`<div class="mut" style="font-size:12px;margin-bottom:6px">${esc(opp.nome)} propone questi orari. Scegli entro ${fmtDT(new Date(new Date(pr.creata_il).getTime()+864e5))}, altrimenti vale il primo:</div><div class="row">${pr.opzioni.map(o=>`<button class="btn sm" onclick="pickTime(${m.id},'${o}')">${fmtDT(new Date(o))}</button>`).join('')}</div>`;
+    else if(casa||now>=dl)body=`<button class="btn sm" onclick="proposeModal(${m.id})">Proponi 3 orari</button>`;
+    else body=`<div class="mut" style="font-size:12px">Propone ${esc(opp.nome)} entro lunedì alle 23:59. Se non lo fa, potrai proporre tu.</div>`;
+    return `<div class="list-row" style="display:block"><div class="row"><b>G${m.giornata}</b> ${casa?'vs':'@'} ${crest(opp,18)} <b>${esc(opp.nome)}</b><span class="sp"></span>${pr?.scelta?'':`<span class="mut" style="font-size:11px">Riserva: ${fmtDT(m.dt)}</span>`}</div><div style="margin-top:6px">${body}</div></div>`};
+  return `<div class="card mb"><div class="hd">Organizza gli orari</div><div class="pad mut" style="font-size:12px;padding-bottom:4px">Il manager di casa propone 3 orari in 3 sere diverse (21:00–23:30) entro lunedì alle 23:59; l'avversario ne sceglie uno entro 24 ore. Senza accordo valgono gli orari di riserva.</div>${list.map(row).join('')}</div>`}
+function proposeModal(mid){const m=M(mid),ws=weekStart(m.dt),min=new Date(Math.max(Date.now(),ws.getTime())),max=new Date(ws.getTime()+7*864e5-30*6e4);
+  openModal(`<h3>Proponi 3 orari</h3><div class="mut" style="font-size:12px">Giornata ${m.giornata} · settimana dal ${fmtD(ws)} al ${fmtD(new Date(ws.getTime()+6*864e5))}. 3 sere diverse, tra le 21:00 e le 23:30.</div>
+  ${[1,2,3].map(i=>`<label class="f">Orario ${i}</label><input type="datetime-local" class="po" min="${toLocalInput(min)}" max="${toLocalInput(max)}" step="900" style="width:100%">`).join('')}
+  <div id="poerr"></div><button class="btn full" onclick="sendProposal(${mid})">Invia proposta</button>`)}
+async function sendProposal(mid){const v=[...document.querySelectorAll('#mbody .po')].map(i=>i.value);if(v.some(x=>!x))return showErr('poerr',{message:'Inserisci tutti e 3 gli orari'});
+  const {error}=await sb.rpc('proponi_orari',{p_match:mid,p_opzioni:v.map(x=>new Date(x).toISOString())});if(error)return showErr('poerr',error);closeModal();await refresh();toast('Proposta inviata')}
+async function pickTime(mid,iso){if(!confirm('Confermi '+fmtDT(new Date(iso))+'? Dopo non si può più cambiare.'))return;
+  const {error}=await sb.rpc('scegli_orario',{p_match:mid,p_scelta:iso});if(error)return toast(errIt(error));await refresh();toast('Orario fissato')}
+function adminDate(mid){const m=M(mid);openModal(`<h3>Cambia data</h3><label class="f">Nuova data e ora</label><input type="datetime-local" id="ad" value="${m.dt?toLocalInput(m.dt):''}" style="width:100%"><div id="aderr"></div><button class="btn full" onclick="saveAdminDate(${mid})">Salva</button>`)}
+async function saveAdminDate(mid){const v=document.getElementById('ad').value;if(!v)return;const iso=new Date(v).toISOString();
+  let r=await sb.from('matches').update({data:iso}).eq('id',mid);if(r.error)return showErr('aderr',r.error);
+  r=await sb.from('proposte_orario').upsert({match_id:mid,opzioni:[iso],scelta:iso,proposto_da:ME.uid,team_id:null});if(r.error)return showErr('aderr',r.error);
+  closeModal();await refresh();toast('Data aggiornata')}
+
 /* ---------- risultati ---------- */
 function lineupHTML(m,tid){const ex=D.mp.filter(x=>x.match_id===m.id&&x.team_id===tid);const ids=new Set([...rosterOf(tid).map(p=>p.id),...ex.map(x=>x.player_id)]);
   const ps=[...ids].map(P).filter(Boolean).sort(byRole);
@@ -503,7 +640,7 @@ function readLineups(){return [...document.querySelectorAll('#mbody .lineup')].f
 async function writeLineups(mid,sides,rows){for(const tid of sides){let r=await sb.from('match_players').delete().eq('match_id',mid).eq('team_id',tid);if(r.error)throw r.error;
   const mine=rows.filter(x=>x.team_id===tid).map(x=>({...x,match_id:mid}));if(mine.length){r=await sb.from('match_players').insert(mine);if(r.error)throw r.error}}}
 
-function openResult(mid){const m=M(mid),H=T(m.home_id),A=T(m.away_id),admin=isAdmin()&&![m.home_id,m.away_id].includes(ME.team?.id)||isAdmin()&&location.hash.startsWith('#admin');
+function openResult(mid,forceAdmin){const m=M(mid),H=T(m.home_id),A=T(m.away_id),admin=isAdmin()&&(forceAdmin||![m.home_id,m.away_id].includes(ME.team?.id)||location.hash.startsWith('#admin'));
   const sides=admin?[H.id,A.id]:[ME.team.id];const ex=D.events.filter(e=>e.match_id===mid).sort((a,b)=>(a.minuto||0)-(b.minuto||0));
   const allP=[...new Set([...rosterOf(H.id),...rosterOf(A.id)].map(p=>p.id))].map(P);
   openModal(`<h3>${admin?'Modifica risultato':'Inserisci risultato'}</h3><div class="mut" style="font-size:12px">Giornata ${m.giornata} · ${fmtD(m.dt)} ${fmtT(m.dt)}</div>
@@ -511,6 +648,7 @@ function openResult(mid){const m=M(mid),H=T(m.home_id),A=T(m.away_id),admin=isAd
   <div id="rgoals"></div>${sides.map(tid=>lineupHTML(m,tid)).join('')}
   <label class="f">Man of the Match</label><select id="rmotm" style="width:100%"><option value="">—</option>${allP.map(p=>`<option value="${p.id}" ${p.id===m.motm_id?'selected':''}>${esc(p.gamertag)} (${esc(teamOf(p.id)?.sigla||'')})</option>`).join('')}</select>
   ${admin?`<label class="f">Stato</label><select id="rstato" style="width:100%">${[['confermato','Confermato (conta in classifica)'],['inserito','Da confermare'],['contestato','Contestato'],['da_giocare','Da giocare (azzera)']].map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`:'<div class="mut" style="font-size:12px;margin-top:10px">Dopo il salvataggio il manager avversario dovrà confermare.</div>'}
+  <label class="f">Screenshot di fine partita (con i voti)</label><input type="file" id="rshots" accept="image/*" multiple style="width:100%">
   <div id="rerr2"></div><button class="btn full" id="rsave" onclick="saveResult(${m.id},${admin})">Salva risultato</button>`);
   const draw=()=>{const hg=Math.max(0,Math.min(30,+document.getElementById('rhg').value||0)),ag=Math.max(0,Math.min(30,+document.getElementById('rag').value||0));
     const keep=[...document.querySelectorAll('#rgoals .grow')].map(r=>({team:+r.dataset.team,min:r.querySelector('.gmin').value,sc:r.querySelector('.gsc').value,as:r.querySelector('.gas').value}));
@@ -529,18 +667,20 @@ async function saveResult(mid,admin){const b=document.getElementById('rsave');co
     await writeLineups(mid,admin?[m.home_id,m.away_id]:[ME.team.id],stato==='da_giocare'?[]:readLineups());
     const upd=stato==='da_giocare'?{gol_casa:null,gol_trasferta:null,motm_id:null,stato,inserito_da:null}:{gol_casa:hg,gol_trasferta:ag,motm_id:document.getElementById('rmotm').value||null,stato};
     r=await sb.from('matches').update(upd).eq('id',mid).select();if(r.error)throw r.error;if(!r.data?.length)throw {message:'Non hai il permesso di modificare questa partita'};
+    const sh=[...(document.getElementById('rshots')?.files||[])];if(sh.length){b.textContent='Carico gli screenshot…';await uploadScreens(mid,sh)}
     closeModal();await refresh();toast(admin?'Risultato salvato':'Risultato inviato: ora deve confermarlo l\'avversario')}
   catch(e){b.textContent='Salva risultato';showErr('rerr2',e)}}
 function openConfirm(mid){const m=M(mid),H=T(m.home_id),A=T(m.away_id),evs=D.events.filter(e=>e.match_id===mid).sort((a,b)=>(a.minuto||0)-(b.minuto||0));
   openModal(`<h3>Conferma risultato</h3><div class="mut" style="font-size:12px">Inserito da ${esc(P(m.inserito_da)?.gamertag||'manager avversario')}</div>
   <div class="sb" style="padding:12px 0"><div class="side">${crest(H,40)}<b>${esc(H.nome)}</b></div><div class="big">${m.gol_casa}-${m.gol_trasferta}</div><div class="side">${crest(A,40)}<b>${esc(A.nome)}</b></div></div>
   ${evs.map(e=>`<div style="font-size:13px;padding:3px 0">${e.minuto?e.minuto+"' ":''}⚽ <b>${esc(P(e.marcatore_id)?.gamertag||'?')}</b> (${esc(T(e.team_id)?.sigla)})${e.assist_id?` · assist ${esc(P(e.assist_id)?.gamertag)}`:''}</div>`).join('')}
-  ${lineupHTML(m,ME.team.id)}<div id="cerr"></div>
+  ${lineupHTML(m,ME.team.id)}
+  <label class="f">I tuoi screenshot di fine partita</label><input type="file" id="cshots" accept="image/*" multiple style="width:100%"><div id="cerr"></div>
   <div class="row" style="margin-top:14px"><button class="btn" style="flex:1" onclick="confirmResult(${mid},true)">✓ Conferma</button><button class="btn red" onclick="confirmResult(${mid},false)">Contesta</button></div>
   <div class="mut" style="font-size:12px;margin-top:8px">Se contesti, il risultato passa al commissario che lo controllerà.</div>`)}
-async function confirmResult(mid,ok){try{if(ok)await writeLineups(mid,[ME.team.id],readLineups());
+async function confirmResult(mid,ok){try{const sh=[...(document.getElementById('cshots')?.files||[])];if(sh.length)await uploadScreens(mid,sh);if(ok)await writeLineups(mid,[ME.team.id],readLineups());
   const r=await sb.from('matches').update({stato:ok?'confermato':'contestato'}).eq('id',mid).select();if(r.error)throw r.error;if(!r.data?.length)throw {message:'Operazione non permessa'};
-  closeModal();await refresh();toast(ok?'Risultato confermato!':'Risultato contestato: se ne occupa il commissario')}catch(e){showErr('cerr',e)}}
+  closeModal();await refresh();if(ok)toast('Risultato confermato!');else{toast('Risultato contestato: spiega il problema nella Sala VAR');openVar(mid)}}catch(e){showErr('cerr',e)}}
 
 /* ================== PANNELLO COMMISSARIO ================== */
 function vAdmin(){if(!isAdmin())return vArea();
@@ -548,14 +688,17 @@ function vAdmin(){if(!isAdmin())return vArea();
   const lopts=sel=>D.leagues.map(l=>`<option value="${l.id}" ${l.id===sel?'selected':''}>${esc(l.nome)}</option>`).join('');
   return `<div class="h1">Pannello commissario</div>
   <div class="card mb"><div class="hd">Squadre da approvare (${pend.length})</div>${pend.map(t=>`<div class="list-row">${crest(t,30)}<div class="sp" style="min-width:0"><b>${esc(t.nome)}</b><div class="mut" style="font-size:12px">Manager ${esc(P(t.manager_id)?.gamertag||'—')} · ${rosterOf(t.id).length} giocatori</div></div><select id="al${t.id}">${lopts(D.leagues[0]?.id)}</select><button class="btn sm" onclick="approve(${t.id})">Approva</button><button class="btn red sm" onclick="delTeam(${t.id})">Elimina</button></div>`).join('')||'<div class="empty">Nessuna squadra in attesa</div>'}</div>
+  ${(()=>{const open=D.vars.filter(v=>v.stato==='aperta');return `<div class="card mb" ${open.length?'style="border-color:var(--gold)"':''}><div class="hd">🎥 Sala VAR · ${open.length} da decidere</div>${open.map(v=>{const m=M(v.match_id);return m?`<div class="list-row"><div class="sp" style="min-width:0"><b>${esc(v.motivo)}</b><div class="mut" style="font-size:12px">G${m.giornata} · ${esc(T(m.home_id)?.nome)} - ${esc(T(m.away_id)?.nome)} · da ${esc(T(v.team_id)?.sigla||'')}</div></div><a class="btn sm" href="#partita-${m.id}">Apri</a></div>`:''}).join('')||'<div class="empty">Nessuna segnalazione aperta</div>'}</div>`})()}
   <div class="card mb"><div class="hd">Risultati da controllare (${check.length})</div>${check.map(m=>`<div class="row" style="padding-right:12px;border-bottom:1px solid rgba(35,47,71,.6)"><div class="sp" style="min-width:0">${mrow(m,true)}</div>${statoTag(m)}<button class="btn sm" onclick="openResult(${m.id})">Apri</button></div>`).join('')||'<div class="empty">Tutto in ordine</div>'}</div>
   ${D.leagues.map(L=>{const ts=leagueTeams(L.id),n=D.matches.filter(m=>m.league_id===L.id).length;
     return `<div class="card mb"><div class="hd">${esc(L.nome)} · ${ts.length} squadre</div>
     ${ts.map(t=>`<div class="list-row">${crest(t,24)}<div class="sp" style="min-width:0"><b>${esc(t.nome)}</b></div><select onchange="moveTeam(${t.id},this.value)">${lopts(L.id)}</select><button class="btn red sm" onclick="delTeam(${t.id})">Elimina</button></div>`).join('')}
     <div class="pad" style="border-top:1px solid var(--line)">${n?`<div class="row"><div class="sp mut" style="font-size:13px">Calendario creato: ${n} partite, ${rounds(L.id)} giornate.</div><button class="btn red sm" onclick="delCalendar(${L.id})">Elimina calendario</button></div>`:
-    `<div class="gsec" style="margin-top:0">Genera calendario automatico</div>
-     <div class="row"><div><label class="f">Prima giornata</label><input type="date" id="cd${L.id}" value="${new Date(Date.now()+864e5*3).toISOString().slice(0,10)}"></div><div><label class="f">Orario</label><input type="time" id="ct${L.id}" value="21:30"></div></div>
-     <label class="f">Giorni in cui si gioca</label><div class="days" id="cg${L.id}">${[1,2,3,4,5,6,0].map(d=>`<label><input type="checkbox" value="${d}" ${d===1||d===4?'checked':''}>${GIORNI[d]}</label>`).join('')}</div>
+    `<div class="gsec" style="margin-top:0">Genera calendario</div>
+     <div class="mut" style="font-size:12px">Ogni settimana (lunedì–domenica) si giocano le giornate scelte. I manager concordano l'orario sul sito; se non lo fanno valgono gli orari di riserva.</div>
+     <label class="f">Settimana di inizio (scegli un giorno qualsiasi di quella settimana)</label><input type="date" id="cd${L.id}" value="${new Date(Date.now()+864e5*3).toISOString().slice(0,10)}">
+     <div class="row"><div><label class="f">Giornate a settimana</label><select id="cn${L.id}"><option>1</option><option selected>2</option></select></div><div><label class="f">Giorno di riserva</label><select id="cg${L.id}">${[1,2,3,4,5,6,0].map(d=>`<option value="${d}" ${d===0?'selected':''}>${GIORNI[d]}</option>`).join('')}</select></div></div>
+     <div class="row"><div><label class="f">Orario riserva 1ª giornata</label><input type="time" id="ct${L.id}" value="21:30"></div><div><label class="f">Orario riserva 2ª giornata</label><input type="time" id="ct2${L.id}" value="22:15"></div></div>
      <label class="days" style="margin-top:10px"><label><input type="checkbox" id="cr${L.id}" checked> Andata e ritorno</label></label>
      <button class="btn full" onclick="genCalendar(${L.id})" ${ts.length<2?'disabled style="opacity:.5"':''}>Genera calendario (${ts.length} squadre)</button>`}</div></div>`}).join('')}
   <div class="card mb"><div class="hd">Nuovo campionato</div><div class="pad row"><input id="nl" placeholder="es. Serie C" style="flex:1"><button class="btn sm" onclick="addLeague()">Aggiungi</button></div></div>
@@ -569,12 +712,13 @@ async function setRole(pid,r){act(sb.from('profiles').update({ruolo_utente:r}).e
 async function addLeague(){const n=document.getElementById('nl').value.trim();if(!n)return;act(sb.from('leagues').insert({nome:n,ordine:Math.max(0,...D.leagues.map(l=>l.ordine))+1}),'Campionato creato')}
 async function delCalendar(lid){if(!confirm('Eliminare TUTTE le partite di '+Lg(lid).nome+', compresi i risultati?'))return;act(sb.from('matches').delete().eq('league_id',lid),'Calendario eliminato')}
 async function genCalendar(lid){const ts=leagueTeams(lid).map(t=>t.id).sort(()=>Math.random()-.5);if(ts.length<2)return;
-  const days=[...document.querySelectorAll('#cg'+lid+' input:checked')].map(i=>+i.value);if(!days.length)return toast('Scegli almeno un giorno');
-  const start=document.getElementById('cd'+lid).value,time=document.getElementById('ct'+lid).value||'21:30',ret=document.getElementById('cr'+lid).checked;
+  const per=+document.getElementById('cn'+lid).value||2,rday=+document.getElementById('cg'+lid).value;
+  const start=document.getElementById('cd'+lid).value,t1=document.getElementById('ct'+lid).value||'21:30',t2=document.getElementById('ct2'+lid).value||'22:15',ret=document.getElementById('cr'+lid).checked;
+  if(!start)return toast('Scegli la settimana di inizio');
   const ids=[...ts];if(ids.length%2)ids.push(null);const n=ids.length,rr=[];
   for(let r=0;r<n-1;r++){const pairs=[];for(let i=0;i<n/2;i++){let h=ids[i],a=ids[n-1-i];if(r%2===1&&i===0)[h,a]=[a,h];if(h!=null&&a!=null)pairs.push([h,a])}rr.push(pairs);ids.splice(1,0,ids.pop())}
   const all=ret?rr.concat(rr.map(p=>p.map(([h,a])=>[a,h]))):rr;
-  const d=new Date(start+'T'+time);const dates=[];while(dates.length<all.length){if(days.includes(d.getDay()))dates.push(new Date(d));d.setDate(d.getDate()+1)}
+  const mon=weekStart(new Date(start+'T12:00'));const dates=all.map((_,g)=>{const d=new Date(mon);d.setDate(d.getDate()+Math.floor(g/per)*7+(rday+6)%7);const [hh,mm]=(g%per===0?t1:t2).split(':');d.setHours(+hh,+mm,0,0);return d});
   const rows=[];all.forEach((pairs,g)=>pairs.forEach(([h,a])=>rows.push({league_id:lid,giornata:g+1,home_id:h,away_id:a,data:dates[g].toISOString()})));
   act(sb.from('matches').insert(rows),`Calendario creato: ${all.length} giornate`)}
 
@@ -588,10 +732,12 @@ const PARENT={partita:'calendario',squadra:'squadre',giocatore:'statistiche',reg
 function render(){const h=(location.hash||'#home').slice(1);const mm=h.match(/^([a-z]+)-(.+)$/);const v=mm?mm[1]:h,arg=mm?mm[2]:null;
   const views={home:vHome,classifica:vClassifica,calendario:vCalendario,statistiche:vStatistiche,squadre:vSquadre,mercato:vMercato,accedi:vAccedi,registrati:vRegistrati,area:vArea,admin:vAdmin,
     partita:()=>vPartita(+arg),squadra:()=>vSquadra(+arg),giocatore:()=>vGiocatore(arg)};
-  let html;try{html=(views[v]||vHome)()}catch(e){console.error(e);html=`<div class="err">Errore nella pagina: ${esc(e.message)}</div>`}
+  const gate=!ME&&!['accedi','registrati'].includes(v);
+  let html;try{html=gate?vAccedi():(views[v]||vHome)()}catch(e){console.error(e);html=`<div class="err">Errore nella pagina: ${esc(e.message)}</div>`}
   document.getElementById('app').innerHTML=html;
   const act2=PARENT[v]||v;
   const nav=[['home','Home'],['classifica','Classifica'],['calendario','Calendario'],['statistiche','Statistiche'],['squadre','Squadre'],['mercato','Mercato'],ME?['area',isAdmin()?'La mia area ⚙':'La mia area']:['accedi','Accedi']];
+  document.querySelector('header').style.display=ME?'':'none';
   document.getElementById('nav').innerHTML=nav.map(([k,l])=>`<a href="#${k}" class="${k===act2?'on':''}">${l}</a>`).join('');
   document.getElementById('leagues').innerHTML=D.leagues.map(L=>`<button class="${L.id===S.league?'on':''}" onclick="setLeague(${L.id})">${esc(L.nome)}</button>`).join('');
   try{localStorage.setItem('pcl_lg',S.league)}catch(e){}
